@@ -2,7 +2,7 @@
 
 **Proto-Synth v2** es una plataforma de desarrollo de audio y síntesis experimental creada por **GC Lab Chile**. Basada en el ESP32, está diseñada para la educación en electrónica, programación de audio (DSP) y música electrónica DIY.
 
-![Proto-Synth v2 Pinout](images/pinout.png)
+![Proto-Synth v2 Pinout](images/Pinout.png)
 
 
 ## 🚀 Características
