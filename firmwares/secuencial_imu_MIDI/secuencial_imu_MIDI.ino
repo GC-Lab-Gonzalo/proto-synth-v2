@@ -1,18 +1,78 @@
-/* 
-Proto-Synth V2.0 - Controlador MIDI con Secuenciador Optimizado
-ESP32 con MIDI funcionando por TX0 - Versión IMU Eficiente
 
-Licencia Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
-GC Lab Chile - 2025
-*/
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - Controlador MIDI con Secuenciador Optimizado - GC Lab Chile
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Controlador MIDI con secuenciador de 4 pasos optimizado para performance en tiempo real.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Paso 1
+// - Potenciómetro 2: Paso 2
+// - Potenciómetro 3: Paso 3 
+// - Potenciómetro 4: Paso 4
+// - Botón 1: Aumentar velocidad
+// - Botón 2: Disminuir velocidad
+// - Botón 3: Cambio de escala
+// - Botón 4: Cambio de octava
+// - LED 1: Paso 1
+// - LED 2: Paso 2
+// - LED 3: Paso 3
+// - LED 4: Paso 4
+// - IMU: Control MIDI
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: Salida de sequencias y control
+//
+// MODO DE USO:
+// 1. Conectar Proto-Synth a DAW/sintetizador via MIDI (o por USB MIDI serial utilizando Hairless MIDI y cambiando el baudio de 31250 a 115200)
+// 2. Ajustar velocidad con botones 1 y 2 (LEDs parpadean al cambiar)
+// 3. Seleccionar escala con botón 3 (LEDs parpadean al cambiar)
+// 4. Seleccionar octava con botón 4 (LEDs parpadean al cambiar)
+// 5. Ajustar valores de cada paso con potenciómetros 1-4
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <Bounce2.h>
 #include <Wire.h>
 
-// Dirección I2C del MPU6050
-#define MPU6050_ADDR 0x68
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
+#define MPU6050_ADDR 0x68 // Dirección I2C del MPU6050
 
-// Definición de pines según Proto-Synth V2.0
 const int POT1 = 13;    // Potenciómetro 1 - Paso 1
 const int POT2 = 14;    // Potenciómetro 2 - Paso 2
 const int POT3 = 12;    // Potenciómetro 3 - Paso 3  
@@ -28,6 +88,9 @@ const int LED2 = 32;    // LED 2 - Paso 2
 const int LED3 = 5;     // LED 3 - Paso 3
 const int LED4 = 2;     // LED 4 - Paso 4
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Variables para velocidad
 int speedStep = 5;
 const int speedLevels[] = {1000, 800, 600, 500, 400, 300, 250, 200, 150, 100, 50};

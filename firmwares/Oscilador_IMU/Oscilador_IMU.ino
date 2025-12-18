@@ -1,32 +1,75 @@
-/*
-  Proto-Synth V2.0 - IMU Controlled Synth 
-  
-  Hardware:
-  - Altavoz en pin 25 (DAC)
-  - IMU (MPU6050) en I2C (SDA=21, SCL=22)
-                
-  Controles IMU:
-  - Eje X: Control de notas (escala flamenca en Mi)
-  - Eje Y: Control de filtro con resonancia 75%
-  
-  Como Funciona??
-  - Carga el programa
-  - Inclina el protosynth en distintas posiciones y ve como varía tanto el tono como el filtro
-  - Potenciómetro 1 Resonancia (Q)
-  - Potenciómetro 2 Rango de frecuencia del filtro (min/max)
-  - Potenciómetro 3 Drive/Saturación antes del filtro
-  - Potenciómetro 4 Tipo de filtro (LP/HP/BP)
 
-  Los potenciometros están invertidos, bajan cuando estan al maximo.
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - IMU Controlled Synth - GC Lab Chile
+// ==============================================================================================================================================
 
-  GC Lab Chile - 2025
-*/
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sintetizador controlado por IMU que genera tonos basados en la inclinación del dispositivo.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Resonancia (Q)
+// - Potenciómetro 2: Rango de frecuencia del filtro (min/max)
+// - Potenciómetro 3: Drive/Saturación antes del filtro
+// - Potenciómetro 4: Tipo de filtro (LP/HP/BP)
+// - Botón 1: No se usa
+// - Botón 2: No se usa
+// - Botón 3: No se usa
+// - Botón 4: No se usa
+// - LED 1: Agudos
+// - LED 2: Medios
+// - LED 3: Graves
+// - LED 4: Silencio
+// - IMU: Control de notas (escala flamenca en Mi) y filtro LPF (Resonancia al 75%)
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Inclina el protosynth en distintas posiciones y ve como varía tanto el tono como el filtro
+// 2. Ajusta los potenciómetros para modificar la resonancia, rango de frecuencia del filtro, distorción y tipo de filtro
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Los potenciometros están invertidos, bajan cuando estan al maximo.
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include "driver/dac.h"
 #include "math.h"
 #include "Wire.h"
 
-// Configuración de hardware
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 const int SDA_PIN = 21;
 const int SCL_PIN = 22;
 const int IMU_ADDRESS = 0x68;
@@ -34,10 +77,10 @@ const int SAMPLE_RATE = 22050;
 const int AMPLITUDE = 90;
 
 // Potenciómetros para control del filtro
-const int POT1_PIN = 13; // Resonancia (Q)
-const int POT2_PIN = 14; // Rango de frecuencia del filtro (min/max)
-const int POT3_PIN = 12; // Drive/Saturación antes del filtro
-const int POT4_PIN = 27; // Tipo de filtro (LP/HP/BP)
+const int POT1_PIN = 13;
+const int POT2_PIN = 14;
+const int POT3_PIN = 12;
+const int POT4_PIN = 27;
 
 // Pines de LEDs (izquierda a derecha: agudo a silencio)
 const int LED1_PIN = 23; // LED izquierda (agudos)
@@ -45,6 +88,9 @@ const int LED2_PIN = 32; // LED centro-izquierda
 const int LED3_PIN = 5;  // LED centro-derecha  
 const int LED4_PIN = 2;  // LED derecha (silencio)
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Variables del IMU
 float imu_accel_x = 0.0;
 float imu_accel_y = 0.0;

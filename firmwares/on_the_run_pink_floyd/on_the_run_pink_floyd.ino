@@ -1,69 +1,78 @@
-/*
- * ================================================================
- * PROTO-SYNTH V2 SEQUENCER "ON THE RUN" - CÓDIGO COMENTADO PARA PRINCIPIANTES
- * ================================================================
- * 
- * LIBRERÍAS NECESARIAS:
- * Este código usa librerías que ya vienen incluidas con Arduino IDE:
- * - "driver/dac.h" (para controlar el DAC del ESP32)
- * - "math.h" (funciones matemáticas como sin, cos, PI)
- * - "Wire.h" (comunicación I2C con el IMU)
- * 
- * HARDWARE DEL PROTO-SYNTH V2:
- * 
- * AUDIO:
- * - Altavoz/Jack de audio → Pin 25 (DAC del ESP32)
- * 
- * SENSOR DE MOVIMIENTO (IMU - MPU6050):
- * - SDA → Pin 21 (datos I2C)
- * - SCL → Pin 22 (reloj I2C)
- * - VCC → 3.3V
- * - GND → GND
- * 
- * CONTROLES (según diagrama del Proto-synth V2):
- * - Potenciómetro 1 (Pin 13): Volumen general
- * - Potenciómetro 2 (Pin 14): Attack (qué tan rápido inicia el sonido)
- * - Potenciómetro 3 (Pin 12): Saturación/Distorsión
- * - Potenciómetro 4 (Pin 27): Decay (qué tan rápido se desvanece el sonido)
- * - Botón 1 (Pin 18): Play/Stop del secuenciador
- * - Botón 2 (Pin 4): Hacer más lento el tempo
- * - Botón 3 (Pin 15): Hacer más rápido el tempo
- * - Botón 4 (Pin 19): No usado
- * 
- * EFECTOS EN TIEMPO REAL CON IMU:
- * - Inclinar hacia X: Controla frecuencia del filtro
- * - Inclinar hacia Y: Controla resonancia del filtro
- * 
- * LEDS VISUALES:
- * - LED 1 (Pin 23): Indica paso 1 y 5 de la secuencia
- * - LED 2 (Pin 32): Indica paso 2 y 6 de la secuencia  
- * - LED 3 (Pin 5):  Indica paso 3 y 7 de la secuencia
- * - LED 4 (Pin 2):  Indica paso 4 y 8 de la secuencia
- * 
- * SECUENCIA MUSICAL:
- * Reproduce la famosa secuencia de "On the Run" de Pink Floyd:
- * Mi4 → Sol4 → La4 → Sol4 → Re5 → Do5 → Re5 → Mi5
- * 
- * INSTRUCCIONES DE USO:
- * 1. Carga el código al Proto-synth V2
- * 2. Presiona Botón 1 para iniciar/detener la secuencia
- * 3. Usa Botón 2/3 para cambiar velocidad
- * 4. Mueve el dispositivo para cambiar el filtro
- * 5. Ajusta potenciómetros para cambiar el sonido
- * ================================================================
- */
 
-// ================================================================
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - SEQUENCER "ON THE RUN" - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sequenciador que reproduce la famosa secuencia de "On the Run" de Pink Floyd
+// Mi4 → Sol4 → La4 → Sol4 → Re5 → Do5 → Re5 → Mi5
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Volumen general
+// - Potenciómetro 2: Attack
+// - Potenciómetro 3: Saturacion/Distorsión 
+// - Potenciómetro 4: Decay
+// - Botón 1: Play/Stop
+// - Botón 2: Reducir el tempo
+// - Botón 3: Aumentar el tempo
+// - Botón 4: No se usa
+// - LED 1: Indica el paso 1 y 5 de la secuencia
+// - LED 2: Indica el paso 2 y 6 de la secuencia
+// - LED 3: Indica el paso 3 y 7 de la secuencia
+// - LED 4: Indica el paso 4 y 8 de la secuencia
+// - IMU: Control de filtro LPF
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Presiona Botón 1 para iniciar/detener la secuencia
+// 2. Usa Botón 2/3 para cambiar velocidad
+// 3. Mueve el dispositivo para cambiar el filtro
+// 4. Ajusta potenciómetros para cambiar el sonido
+//
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
 // INCLUSIÓN DE LIBRERÍAS
-// ================================================================
+// ==============================================================================================================================================
 #include "driver/dac.h"  // Control del DAC (Digital to Analog Converter) del ESP32
 #include "math.h"        // Funciones matemáticas (sin, cos, PI, etc.)
 #include "Wire.h"        // Comunicación I2C para el sensor IMU
 
-// ================================================================
-// CONFIGURACIÓN DE HARDWARE - PINES Y CONSTANTES
-// ================================================================
-
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 // Pines I2C para el sensor de movimiento (IMU)
 const int SDA_PIN = 21;        // Pin de datos I2C
 const int SCL_PIN = 22;        // Pin de reloj I2C
@@ -91,9 +100,9 @@ const int BUTTON2_PIN = 4;     // Botón 2: Disminuir velocidad (más lento)
 const int BUTTON3_PIN = 15;    // Botón 3: Aumentar velocidad (más rápido)
 const int BUTTON4_PIN = 19;    // Botón 4: No usado en esta versión
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL SENSOR IMU (SENSOR DE MOVIMIENTO)
-// ================================================================
+// ==============================================================================================================================================
 
 // Valores brutos del acelerómetro
 float imu_accel_x = 0.0;        // Aceleración en eje X
@@ -106,9 +115,9 @@ float filtered_x = 0.0;         // Valor filtrado del eje X
 float filtered_y = 0.0;         // Valor filtrado del eje Y
 const float IMU_FILTER_ALPHA = 0.2;  // Factor de suavizado (0.0 = sin filtro, 1.0 = filtro máximo)
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL FILTRO DE AUDIO (PROCESAMIENTO DEL SONIDO)
-// ================================================================
+// ==============================================================================================================================================
 
 // Variables para almacenar estados anteriores del filtro
 float filter_x1 = 0, filter_x2 = 0;  // Entradas anteriores
@@ -118,9 +127,9 @@ float filter_y1 = 0, filter_y2 = 0;  // Salidas anteriores
 float filter_a0, filter_a1, filter_a2;  // Coeficientes de entrada
 float filter_b1, filter_b2;             // Coeficientes de retroalimentación
 
-// ================================================================
+// ==============================================================================================================================================
 // SECUENCIA MUSICAL "ON THE RUN"
-// ================================================================
+// ==============================================================================================================================================
 
 // Notas de la famosa secuencia (frecuencias en Hz)
 const float SEQUENCE_NOTES[] = {
@@ -135,9 +144,9 @@ const float SEQUENCE_NOTES[] = {
 };
 const int SEQUENCE_LENGTH = 8;  // Número total de pasos en la secuencia
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL SECUENCIADOR (REPRODUCTOR DE LA SECUENCIA)
-// ================================================================
+// ==============================================================================================================================================
 
 bool sequencer_playing = false;        // Si el secuenciador está reproduciendo
 int current_step = 0;                  // Paso actual en la secuencia (0-7)
@@ -148,9 +157,9 @@ unsigned long step_duration = 200;    // Duración de cada paso en milisegundos 
 const unsigned long MIN_STEP_DURATION = 80;   // Más rápido posible (750 BPM)
 const unsigned long MAX_STEP_DURATION = 500;  // Más lento posible (60 BPM)
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL ENVELOPE (ENVOLVENTE DE VOLUMEN)
-// ================================================================
+// ==============================================================================================================================================
 // El envelope controla cómo inicia y termina cada nota
 
 float envelope_level = 0.0;        // Nivel actual del envelope (0.0 = silencio, 1.0 = máximo)
@@ -161,9 +170,9 @@ unsigned long note_start_time = 0; // Tiempo cuando comenzó la nota actual
 float attack_duration = 50.0;      // Tiempo para llegar al volumen máximo (ms)
 float decay_duration = 150.0;      // Tiempo para desvanecerse (ms)
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DE CONTROL DE BOTONES (ANTIREBOTE)
-// ================================================================
+// ==============================================================================================================================================
 
 // Estados de los botones (para detectar cuando se presionan)
 bool button_pressed = false;       // Estado del botón play/stop
@@ -176,9 +185,9 @@ unsigned long last_button2_time = 0;
 unsigned long last_button3_time = 0;
 const unsigned long BUTTON_DEBOUNCE = 200;  // 200ms de antirebote
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DE GENERACIÓN DE AUDIO
-// ================================================================
+// ==============================================================================================================================================
 
 float currentFreq = 164.81;  // Frecuencia actual a reproducir (Mi3 inicial)
 bool audioPlaying = false;   // Si el audio está sonando
@@ -188,9 +197,9 @@ int waveform_type = 2;       // Tipo de forma de onda (2 = sierra armónica)
 float phase = 0.0;           // Fase actual de la onda (posición en el ciclo)
 float modulation_phase = 0.0; // Fase para modulación (efectos adicionales)
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE INICIALIZACIÓN DEL IMU
-// ================================================================
+// ==============================================================================================================================================
 
 void initIMU() {
   // Inicializar comunicación I2C con el sensor de movimiento
@@ -212,9 +221,9 @@ void initIMU() {
   delay(100);  // Esperar a que se estabilice el sensor
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE LECTURA DEL IMU
-// ================================================================
+// ==============================================================================================================================================
 
 void readIMU() {
   unsigned long currentTime = millis();
@@ -250,9 +259,9 @@ void readIMU() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE ACTUALIZACIÓN DEL FILTRO DE AUDIO
-// ================================================================
+// ==============================================================================================================================================
 
 void updateFilterCoefficients() {
   // CONTROL DE RESONANCIA con IMU Y (inclinación lateral)
@@ -296,9 +305,9 @@ void updateFilterCoefficients() {
   filter_b2 = a2_temp / a0_temp;
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE APLICACIÓN DEL FILTRO Y SATURACIÓN
-// ================================================================
+// ==============================================================================================================================================
 
 float applyFilter(float input) {
   // POTENCIÓMETRO 3: SATURACIÓN/DISTORSIÓN - INVERTIDO
@@ -338,9 +347,9 @@ float applyFilter(float input) {
   return output;  // Devolver señal filtrada
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE ACTUALIZACIÓN DEL SECUENCIADOR
-// ================================================================
+// ==============================================================================================================================================
 
 void updateSequencer() {
   // Si el secuenciador no está reproduciendo, silenciar todo
@@ -376,9 +385,9 @@ void updateSequencer() {
   updateEnvelope();
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE ACTUALIZACIÓN DEL ENVELOPE (ENVOLVENTE)
-// ================================================================
+// ==============================================================================================================================================
 
 void updateEnvelope() {
   // Si no hay audio, mantener envelope en cero
@@ -421,9 +430,9 @@ void updateEnvelope() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE ACTUALIZACIÓN DE LEDS
-// ================================================================
+// ==============================================================================================================================================
 
 void updateLEDs() {
   // APAGAR TODOS LOS LEDS primero
@@ -442,9 +451,9 @@ void updateLEDs() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE GENERACIÓN DE FORMAS DE ONDA
-// ================================================================
+// ==============================================================================================================================================
 
 // Genera onda triangular (subida y bajada lineal)
 float generateTriangle(float normalized_phase) {
@@ -481,9 +490,9 @@ float generateHarmonicSaw(float normalized_phase) {
   return output * 0.5;  // Reducir amplitud total para evitar saturación
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN PRINCIPAL DE GENERACIÓN DE FORMAS DE ONDA
-// ================================================================
+// ==============================================================================================================================================
 
 float generateWaveform(float samples_per_cycle) {
   // ACTUALIZAR FASE (posición en el ciclo de la onda)
@@ -520,9 +529,9 @@ float generateWaveform(float samples_per_cycle) {
   return output;
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE CONTROL DE BOTONES
-// ================================================================
+// ==============================================================================================================================================
 
 void checkButtons() {
   unsigned long current_time = millis();
@@ -596,9 +605,9 @@ void checkButtons() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN SETUP - CONFIGURACIÓN INICIAL (SE EJECUTA UNA VEZ)
-// ================================================================
+// ==============================================================================================================================================
 
 void setup() {
   // CONFIGURAR PINES DE LEDS como salidas digitales
@@ -638,9 +647,9 @@ void setup() {
   currentFreq = SEQUENCE_NOTES[0];  // Establecer primera nota (Mi4)
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN LOOP - BUCLE PRINCIPAL (SE EJECUTA CONTINUAMENTE)
-// ================================================================
+// ==============================================================================================================================================
 
 void loop() {
   // VARIABLES ESTÁTICAS (mantienen su valor entre llamadas)

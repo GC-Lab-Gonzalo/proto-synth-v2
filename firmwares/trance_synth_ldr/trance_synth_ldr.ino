@@ -1,35 +1,80 @@
-/*
-  Secuenciador de Trance Electrónico para Proto-Synth V2.0
-  
-  Hardware Proto-Synth V2.0:
-  - 4 Potenciómetros en pines 13, 14, 12, 27
-  - 1 LDR en pin 26
-  - 4 Botones en pines 18, 4, 15, 19 (con pull-up interno)
-  - 4 LEDs en pines 23, 32, 5, 2
-  - Altavoz en pin 25 (DAC)
-  
-  Controles:
-  - Pot 1 (Pin 13): Control de Volumen
-  - Pot 2 (Pin 14): Resonancia del filtro
-  - Pot 3 (Pin 12): Tempo (40-300 BPM)
-  - Pot 4 (Pin 27): Decay/Release - Control de envelope
-  
-  - LDR (Pin 26): Frecuencia de corte del filtro
-  
-  - Botón 1 Play/Stop 
-  - Botón 2 Cambiar longitud de secuencia
-  - Botón 3 Cambiar escala 
-  - Botón 4 Cambiar patrón 
-  
-  - LEDs: Indican el paso actual de la secuencia
-  
-  GC Lab Chile - 2025
-*/
 
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - Secuenciador de Trance Electrónico - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sequenciador de trance electrónico con filtro controlado por LDR.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Control de Volumen
+// - Potenciómetro 2: Resonancia del filtro
+// - Potenciómetro 3: Tempo (40-300 BPM)
+// - Potenciómetro 4: Decay/Release
+// - Botón 1: Play/Stop 
+// - Botón 2: Cambiar longitud de secuencia
+// - Botón 3: Cambiar escala
+// - Botón 4: Cambiar patrón 
+// - LED 1: Indicador de sequencia
+// - LED 2: Indicador de sequencia
+// - LED 3: Indicador de sequencia
+// - LED 4: Indicador de sequencia
+// - IMU: No se usa
+// - LDR: Control de filtro LPF
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Ajusta el Potenciómetro 1 para controlar el volumen de salida.
+// 2. Usa el Potenciómetro 2 para ajustar la resonancia del filtro.
+// 3. Usa el Potenciómetro 3 para ajustar el tempo de la secuencia.
+// 4. Usa el Potenciómetro 4 para ajustar el decay/release de las notas.
+// 5. Presiona el Botón 1 para iniciar o detener la secuencia.
+// 6. Usa el Botón 2 para cambiar la longitud de la secuencia (4, 8, 16 pasos).
+// 7. Usa el Botón 3 para cambiar entre diferentes escalas musicales.
+// 8. Usa el Botón 4 para cambiar entre diferentes patrones de secuencia.
+// 9. Ajusta la luz ambiental para modificar la frecuencia de corte del filtro LPF mediante el LDR.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include "driver/dac.h"
 #include "math.h"
 
-// Pines de hardware Proto-Synth V2.0 
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 const int VOLUME_POT_PIN = 13;      // Control de volumen
 const int CUTOFF_LDR_PIN = 26;      // LDR para frecuencia de corte del filtro
 const int RESONANCE_POT_PIN = 14;
@@ -43,6 +88,9 @@ const int LENGTH_BTN_PIN = 19;
 
 const int LED_PINS[4] = {23, 32, 5, 2};
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Configuración de audio
 const int SAMPLE_RATE = 8000;
 const int MAX_AMPLITUDE = 90;  // CAMBIADO: Ahora es amplitud máxima

@@ -1,60 +1,95 @@
-/*
- * ===============================================
- * PROTO-SYNTH V2.0 - MELODIC SAMPLER
- * ===============================================
- * 
- * INSTRUCCIONES DE USO:
- * 
- * 🎤 GRABACIÓN:
- * 1. Conecta un micrófono al Pin 33
- * 2. Presiona BOTÓN 1 (Pin 18) para iniciar grabación
- * 3. El LED 4 (Pin 2) se encenderá fijo y los otros LEDs parpadearán
- * 4. Graba tu sample base (máximo 1.5 segundos)
- * 5. Presiona BOTÓN 1 nuevamente para detener la grabación
- * 
- * 🎵 REPRODUCCIÓN:
- * 1. Después de grabar, presiona BOTÓN 2 (Pin 4) para reproducir
- * 2. Tu sample se reproducirá siguiendo la melodía de Super Mario Bros
- * 3. Cada nota de la melodía usa tu sample con diferentes tonos
- * 4. La melodía se repite en loop automáticamente
- * 5. Presiona BOTÓN 2 nuevamente para detener
- * 
- * 🎛️ CONTROLES:
- * - POTENCIÓMETRO 3 (Pin 12): Control de TEMPO (60-200 BPM)
- * - POTENCIÓMETRO 1 (Pin 13): Control de PITCH (+/- 24 semitonos)
- * - POTENCIÓMETRO 2 (Pin 14): Control de VOLUMEN MASTER (0-100%)
- * - POTENCIÓMETRO 4 (Pin 27): EXTRA (reservado para futuras funciones)
- * 
- * 🔄 EFECTOS:
- * - BOTÓN 3 (Pin 15): Activa/desactiva modo REVERSA del sample
- * - BOTÓN 4 (Pin 19): (No usado - solo hay una melodía disponible)
- * 
- * 💡 INDICADORES LED:
- * - LED 1 (Pin 23): Parpadea con cada nota (beat indicator)
- * - LED 2 (Pin 32): Encendido durante reproducción
- * - LED 3 (Pin 5): Indica melodía actual (no usado con una sola melodía)
- * - LED 4 (Pin 2): Encendido durante grabación
- * 
- * 🔊 SALIDA DE AUDIO:
- * - Pin 25: Salida DAC para amplificador o auriculares
- * 
- * 📝 NOTAS TÉCNICAS:
- * - Sample Rate: 22kHz
- * - Resolución: 12 bits
- * - Duración máxima de grabación: 1.5 segundos
- * - La melodía base está 4 octavas abajo del original
- * - El control de pitch permite subir/bajar 2 octavas adicionales
- * 
- * 🎼 MELODÍA INCLUIDA:
- * - Super Mario Bros - Overworld Theme (completa)
- * 
- * ===============================================
- */
 
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - MELODIC SAMPLER - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sampler melódico que permite grabar un sample base y reproducirlo siguiendo la melodía de Super Mario Bros y otras melodias populares.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Control de PITCH (+/- 24 semitonos)
+// - Potenciómetro 2: Control de VOLUMEN MASTER (0-100%)
+// - Potenciómetro 3: Control de TEMPO (60-200 BPM) 
+// - Potenciómetro 4: No se usa
+// - Botón 1: Grabación del sample base
+// - Botón 2: Reproducción/Detención de la melodía
+// - Botón 3: Activa/desactiva modo REVERSA del sample
+// - Botón 4: Selector de melodia (No funciona - solo hay una melodía disponible)
+// - LED 1: Parpadea con cada nota (beat indicator)
+// - LED 2: Encendido durante reproducción
+// - LED 3: Indica melodía actual (no usado con una sola melodía)
+// - LED 4: Encendido durante grabación
+// - IMU: No se usa
+// - LDR: No se usa
+// - Micrófono: Grabadora
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Presiona el BOTÓN 1 para iniciar la grabación del sample base.
+// 2. Graba tu sample (máximo 1.5 segundos). El LED 4 se encenderá fijo y los otros LEDs parpadearán.
+// 3. Presiona el BOTÓN 1 nuevamente para detener la grabación.
+// 4. Presiona el BOTÓN 2 para reproducir la melodía usando tu sample grabado.
+// 5. Ajusta el Potenciómetro 1 para cambiar el pitch.
+// 6. Ajusta el Potenciómetro 2 para cambiar el volumen master.
+// 7. Ajusta el Potenciómetro 3 para cambiar el tempo.
+// 8. Presiona el BOTÓN 3 para activar/desactivar el modo reversa del sample.
+// 9. Presiona el BOTÓN 2 nuevamente para detener la reproducción.
+//
+// INFORMACIÓN DEL CODIGO:
+// - Melodias Incluidas:
+//   1. Super Mario Bros - Overworld Theme (completa)
+//   2. Twinkle Twinkle Little Star (No implementada)
+//   3. Happy Birthday (No implementada)
+//   4. Ode to Joy Beethoven (No implementada)
+//   5. Mary Had a Little Lamb (No implementada)
+// - NOTAS TÉCNICAS:
+//   - Sample Rate: 22kHz
+//   - Resolución: 12 bits
+//   - Duración máxima de grabación: 1.5 segundos
+//   - La melodía base está 4 octavas abajo del original
+//   - El control de pitch permite subir/bajar 2 octavas adicionales  
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <driver/adc.h>
 #include <driver/dac.h>
 #include <Arduino.h>
 
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 // Pines Proto-Synth V2.0
 const int MIC_PIN = 33;          // Micrófono
 const int AUDIO_OUT_PIN = 25;    // Salida DAC
@@ -77,6 +112,9 @@ const int LED2 = 32;  // Playing indicator
 const int LED3 = 2;   // Melody indicator
 const int LED4 = 5;   // Recording indicator
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Configuración de audio
 const int SAMPLE_RATE = 22000;   
 const int MAX_SAMPLES = 33000;   // 1.5 segundos a 22kHz

@@ -1,31 +1,68 @@
-/*
-  Proto-Synth V2.0 - IMU Controlled Synth con Formas de Onda Mejoradas
-  
-  Hardware:
-  - Altavoz en pin 25 (DAC)
-  - IMU (MPU6050) en I2C (SDA=21, SCL=22)
-  
-  Controles IMU:
-  - Eje X: Control de notas CONTINUO (rango de 3 notas centrado en E3) - MÁS SENSIBLE
-  - Eje Y: Control de filtro con resonancia 75% - MÁS SENSIBLE
-  
-Potenciómetros 
-Resonancia (Q)
-Volumen general
-Drive/Saturación antes del filtro
-Frecuencia mínima del filtro (high-pass progresivo)
 
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - IMU Controlled Synth con Formas de Onda Mejoradas - GC Lab Chile
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
-// Botones para control
-Botón para cambio de rangos
-Botón para cambio de octava central
-Botón para nota central aleatoria
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sintetizador controlado por IMU con generación de ondas mejoradas, filtro dinámico y controles más precisos.
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Resonancia (Q)
+// - Potenciómetro 2: Volumen general
+// - Potenciómetro 3: Drive/Saturación antes del filtro
+// - Potenciómetro 4: Frecuencia mínima del filtro (high-pass progresivo)
+// - Botón 1: Cambio de rangos
+// - Botón 2: Cambio de octava central
+// - Botón 3: Nota central aleatoria
+// - Botón 4: No se usa
+// - LED 1: Agudos
+// - LED 2: Medios
+// - LED 3: Graves
+// - LED 4: Silencio
+// - IMU: Control de notas CONTINUO (rango de 3 notas centrado en E3) y filtro LPF (Resonancia al 75%)
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Inclina el protosynth en distintas posiciones y ve como varía tanto el tono como el filtro
+// 2. Ajusta los potenciómetros para modificar la resonancia, rango de frecuencia del filtro, distorción y tipo de filtro
+// ==============================================================================================================================================
 
-  GC Lab Chile - 2025
-*/
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Los potenciometros están invertidos, bajan cuando estan al maximo.
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include "driver/dac.h"
 #include "math.h"
 #include "Wire.h"

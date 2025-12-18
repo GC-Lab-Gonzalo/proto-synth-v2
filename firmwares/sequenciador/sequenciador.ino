@@ -1,33 +1,82 @@
-/*
-  Proto-Synth V2 - WaveShaping Pattern Sequencer
-  
-  Esta versión elimina la segunda voz y añade selección de forma de onda
-  con el Botón 4. El Potenciómetro 4 ahora controla el Ancho de Pulso (Pulse Width).
 
-  Hardware Mapping (ACTUALIZADO):
-  - DAC: Pin 25
-  - IMU (MPU6050): Eje X=Cutoff, Eje Y=Resonancia
-  - LDR (Pin 26): Control de Octava
-  - LEDs: 23, 32, 5, 2
-  - Potenciómetros (Lógica Invertida):
-    - POT 1 (Pin 13): Tempo
-    - POT 2 (Pin 14): Volumen General
-    - POT 3 (Pin 12): Gate / Duración de nota
-    - POT 4 (Pin 27): Ancho de Pulso (para onda de Pulso)
-  - Botones (con pull-up):
-    - Botón 1 (Pin 18): Start / Stop
-    - Botón 2 (Pin 4): Siguiente Patrón
-    - Botón 3 (Pin 15): Patrón Anterior
-    - Botón 4 (Pin 19): Cambiar Forma de Onda
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - WaveShaping Pattern Sequencer - GC Lab Chile
+// ==============================================================================================================================================
 
-  GC Lab Chile - 2025
-*/
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sequenciador de patrones con síntesis de una voz basada en formas de onda modificables.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Tempo
+// - Potenciómetro 2: Volumen General
+// - Potenciómetro 3: Gate / Duración de nota 
+// - Potenciómetro 4: Ancho de Pulso (para onda de Pulso)
+// - Botón 1: Start / Stop
+// - Botón 2: Siguiente Patrón
+// - Botón 3: Patrón Anterior
+// - Botón 4: Cambiar Forma de Onda
+// - LED 1: Indicador de sequencia
+// - LED 2: Indicador de sequencia
+// - LED 3: Indicador de sequencia
+// - LED 4: Indicador de sequencia
+// - IMU: Control de filtro LPF
+// - LDR: Control de Octava
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Inicia o detén la reproducción con el botón 1.
+// 2. Establece el tempo con el potenciometro 1.
+// 3. Ajusta el volumen general con el potenciometro 2.
+// 4. Configura la duración de las notas con el potenciometro 3.
+// 5. Selecciona la forma de onda con el botón 4.
+// 6. Usa el potenciometro 4 para ajustar el ancho de pulso si la forma de onda seleccionada es Pulso.
+// 7. Controla el cutoff y la resonancia del filtro con el IMU.
+// 8. Cambia la octava con el LDR.
+// 9. Cambia entre patrones con los botones 2 y 3.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Los potenciómetros tienen lógica invertida (máximo valor = 0, mínimo valor = 4095).
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include "driver/dac.h"
 #include "math.h"
 #include "Wire.h"
 
-// --- CONFIGURACIÓN DE PINES ---
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 const int SAMPLE_RATE = 22050;
 const int AMPLITUDE = 127;
 const int SDA_PIN=21, SCL_PIN=22, IMU_ADDRESS=0x68;
@@ -36,6 +85,9 @@ const int LED1_PIN=23, LED2_PIN=32, LED3_PIN=5, LED4_PIN=2;
 const int BUTTON1_PIN=18, BUTTON2_PIN=4, BUTTON3_PIN=15, BUTTON4_PIN=19; // Botón 4 añadido
 const int LDR_PIN = 26;
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // --- PATRONES ---
 const int NUM_SEQUENCES = 21, NUM_STEPS = 8;
 const int NOTES[NUM_SEQUENCES][NUM_STEPS] = { /* ... (los mismos patrones de antes) ... */ 

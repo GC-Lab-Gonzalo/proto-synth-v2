@@ -1,40 +1,80 @@
-/*
-  Secuenciador de Trance Electrónico para Proto-Synth V2.0
-  
-  Hardware Proto-Synth V2.0:
-  - 4 Potenciómetros en pines 13, 14, 12, 27
-  - 4 Botones en pines 18, 4, 15, 19 (con pull-up interno)
-  - 4 LEDs en pines 23, 32, 5, 2
-  - Altavoz en pin 25 (DAC)
-  - IMU por I2C (SDA=21, SCL=22)
-  
-  Controles:
-  
-  - IMU Eje X: Frecuencia de corte del filtro
-  - IMU Eje Y: Resonancia del filtro
 
-  - Pot 1 (Pin 13): Control de Ataque - Velocidad de subida de la nota
-  - Pot 2 (Pin 14): Volumen General (0-100%)
-  - Pot 3 (Pin 12): Tempo (40-300 BPM)
-  - Pot 4 (Pin 27): Decay/Release - Control de envelope
-  
-  - Botón 1 (Pin 15): Play/Stop
-  - Botón 2 (Pin 19): Cambiar longitud de secuencia
-  - Botón 3 (Pin 18): Cambiar escala
-  - Botón 4 (Pin 4): Cambiar patrón
-  
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 -  Secuenciador de Trance Electrónico - GC Lab Chile
+// ==============================================================================================================================================
 
-  
-  - LEDs: Indican el paso actual de la secuencia
-  
-  GC Lab Chile - 2025
-*/
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sequenciador de música trance electrónico controlado por IMU.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Control de Ataque
+// - Potenciómetro 2: Volumen General (0-100%)
+// - Potenciómetro 3: Tempo (40-300 BPM)
+// - Potenciómetro 4: Decay/Release
+// - Botón 1: Play/Stop
+// - Botón 2: Cambiar longitud de secuencia
+// - Botón 3: Cambiar escala
+// - Botón 4: Cambiar patrón
+// - LED 1: Indicador de sequencia
+// - LED 2: Indicador de sequencia
+// - LED 3: Indicador de sequencia
+// - LED 4: Indicador de sequencia
+// - IMU: Control de filtro LPF
+// - LDR: No se usa
+// - Micrófono:
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Inicia o detén la reproducción con el botón 1.
+// 2. Ajusta el tempo con el potenciómetro 3.
+// 3. Cambia la escala musical con el botón 3.
+// 4. Cambia el patrón de secuencia con el botón 4.
+// 5. Ajusta el volumen general con el potenciómetro 2.
+// 6. Ajusta el ataque de las notas con el potenciómetro 1.
+// 7. Ajusta el decay/release con el potenciómetro 4.
+// 8. Controla el filtro en tiempo real moviendo el IMU.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include "driver/dac.h"
 #include "math.h"
 #include "Wire.h"
 
-// Pines de hardware Proto-Synth V2.0
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 const int ATTACK_POT_PIN = 13;  // Nuevo: Control de ataque
 const int VOLUME_POT_PIN = 14;  // Control de volumen general
 const int TEMPO_POT_PIN = 12;
@@ -54,6 +94,9 @@ const int LENGTH_BTN_PIN = 19;
 
 const int LED_PINS[4] = {23, 32, 5, 2};
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Configuración de audio
 const int SAMPLE_RATE = 8000;
 const int MAX_AMPLITUDE = 90;  // Amplitud máxima

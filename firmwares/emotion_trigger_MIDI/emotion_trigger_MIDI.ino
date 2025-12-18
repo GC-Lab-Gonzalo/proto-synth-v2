@@ -1,91 +1,117 @@
-/*
- * EmotionTrigger - Proto-Synth ESP32 MIDI Controller
- * Desarrollado para Proto-Synth de GC Lab Chile
- * 
- * DESCRIPCIÓN:
- * Controlador MIDI gestual que utiliza el acelerómetro MPU6050 para disparar 
- * emociones musicales mediante golpes e impactos bruscos. Incluye 4 escalas modales 
- * emotivas con control completo de expresión musical a través de potenciómetros.
- * 
- * CARACTERÍSTICAS DEL HARDWARE (Proto-Synth GC Lab Chile):
- * - Microcontrolador: ESP32 DevKit
- * - Sensor de movimiento: MPU6050 (acelerómetro/giroscopio I2C)
- * - 4 Botones con pull-up (cambio de escalas)
- * - 4 LEDs indicadores (modo actual)
- * - 4 Potenciómetros analógicos (control de expresión)
- * - Salida MIDI: Pin TX0 (Serial Hardware)
- * - Sensor de luz LDR (Pin 26)
- * - Jack de audio DAC (Pin 25)
- * - Micrófono (Pin 33)
- * 
- * ESCALAS EMOCIONALES DISPONIBLES:
- * 1. Frigio (LED1) - Melancólico, misterioso, español
- * 2. Mixolidio (LED2) - Alegre, rockero, festivo
- * 3. Lidio (LED3) - Mágico, etéreo, luminoso
- * 4. Eólico (LED4) - Triste, emotivo, nostálgico
- * 
- * CONTROLES DE EXPRESIÓN:
- * - Botones 1-4: Cambio de escala emocional
- * - Potenciómetro 1: Volumen/velocidad MIDI (0-127)
- * - Potenciómetro 2: Aleatoriedad de notas (0-100%)
- * - Potenciómetro 3: Rango inferior - nota más grave (C1-C5)
- * - Potenciómetro 4: Rango superior - nota más aguda (C4-Bb6)
- * 
- * MODO DE USO:
- * 1. Conectar Proto-Synth a DAW/sintetizador via MIDI
- * 2. Seleccionar escala emocional con botones (LED indica modo activo)
- * 3. Ajustar volumen con potenciómetro 1
- * 4. Configurar rango de notas con potenciómetros 3 y 4
- * 5. Ajustar aleatoriedad con potenciómetro 2
- * 6. Realizar golpes/impactos con la placa para disparar emociones musicales
- * 7. Intensidad del impacto afecta velocidad/volumen de notas
- * 
- * CONEXIONES:
- * MPU6050: VCC-3.3V, GND-GND, SCL-GPIO22, SDA-GPIO21
- * MIDI Out: TX0 (Hardware Serial a 31250 baud)
- * 
- * AUTOR: Desarrollado para GC Lab Chile
- * PROYECTO: EmotionTrigger v1.0
- * FECHA: Agosto 2025
- */
 
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - EmotionTrigger - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Controlador MIDI gestual que utiliza el acelerómetro MPU6050 para disparar 
+// emociones musicales mediante golpes e impactos bruscos. Incluye 4 escalas modales 
+// emotivas con control completo de expresión musical a través de potenciómetros.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Volumen/velocidad MIDI (0-127)
+// - Potenciómetro 2: Aleatoriedad de notas (0-100%)
+// - Potenciómetro 3: Rango inferior - nota más grave (C1-C5)
+// - Potenciómetro 4: Rango superior - nota más aguda (C4-Bb6)
+// - Boton 1: Cambio a escala frigia (Melancólica, misteriosa, español)
+// - Boton 2: Cambio a escala mixolidia (Alegre, rockera, festiva)
+// - Boton 3: Cambio a escala lidia (Mágica, etérea, luminosa)
+// - Boton 4: Cambio a escala eolica (Triste, emotiva, nostálgica)
+// - LED 1: Indica escala frigia activa
+// - LED 2: Indica escala mixolidia activa
+// - LED 3: Indica escala lidia activa
+// - LED 4: Indica escala eolica activa
+// - IMU: Detecta impactos bruscos para disparar notas MIDI
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: Envía notas MIDI trigger según impactos y configuración
+//
+// MODO DE USO:
+// 1. Conectar Proto-Synth a DAW/sintetizador via MIDI (o por USB MIDI serial utilizando Hairless MIDI y cambiando el baudio de 31250 a 115200)
+// 2. Seleccionar escala emocional con botones (LED indica modo activo)
+// 3. Ajustar volumen con potenciómetro 1
+// 4. Configurar rango de notas con potenciómetros 3 y 4
+// 5. Ajustar aleatoriedad con potenciómetro 2
+// 6. Realizar golpes/impactos con la placa para disparar emociones musicales
+//
+// INFORMACIÓN DEL CODIGO:
+// - La intensidad del impacto afecta la velocidad y/o volumen de las notas.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <Wire.h>
 
-// Dirección I2C del MPU6050
-#define MPU6050_ADDR 0x68
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
+#define MPU6050_ADDR 0x68 // Dirección I2C del MPU6050
 
-// Pines del hardware Proto-Synth
-#define BUTTON1_PIN 18    // Botón 1 (pull-up)
-#define BUTTON2_PIN 4     // Botón 2 (pull-up)  
-#define BUTTON3_PIN 15    // Botón 3 (pull-up)
-#define BUTTON4_PIN 19    // Botón 4 (pull-up)
+#define BUTTON1_PIN 18    // Botón 1
+#define BUTTON2_PIN 4     // Botón 2 
+#define BUTTON3_PIN 15    // Botón 3
+#define BUTTON4_PIN 19    // Botón 4
 
 #define LED1_PIN 23       // LED 1
 #define LED2_PIN 32       // LED 2
 #define LED3_PIN 5        // LED 3
 #define LED4_PIN 2        // LED 4
 
-#define POT1_PIN 13       // Potenciómetro 1 - Volumen
-#define POT2_PIN 14       // Potenciómetro 2 - Aleatoriedad
-#define POT3_PIN 12       // Potenciómetro 3 - Rango inferior (graves)
-#define POT4_PIN 27       // Potenciómetro 4 - Rango superior (agudas)
+#define POT1_PIN 13       // Potenciómetro 1
+#define POT2_PIN 14       // Potenciómetro 2
+#define POT3_PIN 12       // Potenciómetro 3
+#define POT4_PIN 27       // Potenciómetro 4
 
-// Umbral para detectar impactos
-#define MOVEMENT_THRESHOLD 15000
+#define MOVEMENT_THRESHOLD 15000 // Umbral para detectar impactos
 #define NOTE_DURATION 150  // Duración de notas trigger
+
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 
 // ESCALAS EMOCIONALES - 4 Modos diferentes
 enum ScaleMode {
-  PHRYGIAN_MODE = 0,    // Frigio - Melancólico, misterioso
-  MIXOLYDIAN_MODE,      // Mixolidio - Alegre, rockero, festivo
-  LYDIAN_MODE,          // Lidio - Mágico, etéreo, luminoso
-  AEOLIAN_MODE          // Eólico (Menor Natural) - Triste, emotivo
+  PHRYGIAN_MODE = 0,    // Frigio
+  MIXOLYDIAN_MODE,      // Mixolidio
+  LYDIAN_MODE,          // Lidio
+  AEOLIAN_MODE          // Eólico (Menor Natural)
 };
 
 ScaleMode currentMode = PHRYGIAN_MODE;
 
 // Escalas definidas con características emotivas - RANGO COMPLETO MIDI
-// Modo Frigio (melancólico, misterioso, español)
+// Modo Frigio
 int phrygianNotes[] = {
   // Octava 1-6: 1, b2, b3, 4, 5, b6, b7
   24, 25, 27, 29, 31, 32, 34,  // C1, Db1, Eb1, F1, G1, Ab1, Bb1
@@ -96,7 +122,7 @@ int phrygianNotes[] = {
   84, 85, 87, 89, 91, 92, 94   // C6, Db6, Eb6, F6, G6, Ab6, Bb6
 };
 
-// Modo Mixolidio (alegre, rockero, festivo, blues-rock)
+// Modo Mixolidio
 int mixolydianNotes[] = {
   // Octava 1-6: 1, 2, 3, 4, 5, 6, b7
   24, 26, 28, 29, 31, 33, 34,  // C1, D1, E1, F1, G1, A1, Bb1
@@ -107,7 +133,7 @@ int mixolydianNotes[] = {
   84, 86, 88, 89, 91, 93, 94   // C6, D6, E6, F6, G6, A6, Bb6
 };
 
-// Modo Lidio (mágico, etéreo, luminoso, soñador)
+// Modo Lidio
 int lydianNotes[] = {
   // Octava 1-6: 1, 2, 3, #4, 5, 6, 7
   24, 26, 28, 30, 31, 33, 35,  // C1, D1, E1, F#1, G1, A1, B1
@@ -118,7 +144,7 @@ int lydianNotes[] = {
   84, 86, 88, 90, 91, 93, 95   // C6, D6, E6, F#6, G6, A6, B6
 };
 
-// Modo Eólico - Menor Natural (triste, emotivo, nostálgico)
+// Modo Eólico
 int aeolianNotes[] = {
   // Octava 1-6: 1, 2, b3, 4, 5, b6, b7
   24, 26, 27, 29, 31, 32, 34,  // C1, D1, Eb1, F1, G1, Ab1, Bb1

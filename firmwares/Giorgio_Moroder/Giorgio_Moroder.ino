@@ -1,35 +1,83 @@
-/*
- * ================================================================
- * ESP32 UNIFIED SYNTH + SAMPLER - MODO DUAL
- * ================================================================
- * 
- * MODOS:
- * - MODO SYNTH: Secuenciador "Giorgio by Moroder" con IMU
- * - MODO SAMPLER: Reproductor de sample con control de pitch
- * 
- * CONTROLES:
- * - BTN 18: Play/Stop SAMPLER
- * - BTN 19: Play/Stop SYNTH
- * - POT 13: Pitch (SAMPLER) / Volumen (SYNTH)
- * - POT 14: Attack (SYNTH solamente)
- * - POT 12: Saturación (SYNTH solamente) 
- * - POT 27: Decay (SYNTH solamente)
- * 
- * LEDS:
- * - LEDs 23,32,5,2: SAMPLER (todos encendidos) / SYNTH (secuencia)
- * ================================================================
- */
 
-// ================================================================
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - Giorgio Moroder SYNTH + SAMPLER - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sintetizador que reproduce la secuencia de Giorgio by Moroder de Daft Punk y Sampler que por defecto lanza "My name is Giorgio"
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Pitch (SAMPLER) / Volumen (SYNTH)
+// - Potenciómetro 2: Attack (SYNTH solamente)
+// - Potenciómetro 3: Saturación (SYNTH solamente) 
+// - Potenciómetro 4: Decay (SYNTH solamente)
+// - Botón 1: Play/Stop SAMPLER
+// - Botón 2: Play/Stop SYNTH
+// - Botón 3: No se usa
+// - Botón 4: No se usa
+// - LED 1: SAMPLER (siempre encendido) / SYNTH (step de la secuencia)
+// - LED 2: SAMPLER (siempre encendido) / SYNTH (step de la secuencia)
+// - LED 3: SAMPLER (siempre encendido) / SYNTH (step de la secuencia)
+// - LED 4: SAMPLER (siempre encendido) / SYNTH (step de la secuencia)
+// - IMU: Control de filtro LPF SYNTH 
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+//  
+// MODO DE USO:
+// 1. Usa el Botón 1 para iniciar o detener el SAMPLER. El LED 1 indicará el estado del SAMPLER.
+// 2. Usa el Botón 2 para iniciar o detener el SYNTH. Los LEDs 1-4 indicarán los pasos de la secuencia activa.
+// 3. Ajusta el Potenciómetro 1 para controlar el Pitch del SAMPLER o el Volumen del SYNTH.
+// 4. Ajusta los Potenciómetros 2, 3 y 4 para modificar los parámetros de Attack, Saturación y Decay del SYNTH.
+// 5. Mueve el dispositivo para aplicar efectos al SYNTH utilizando el sensor IMU.
+//
+// INFORMACIÓN DEL CODIGO:
+// - Busca "*** PEGAR AQUÍ TU VECTOR SEQUENCE_NOTES[] COMPLETO ***" y reemplaza el array temporal con tus 256 notas
+// - Solo un modo puede estar activo a la vez
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
 // INCLUSIÓN DE LIBRERÍAS
-// ================================================================
+// ==============================================================================================================================================
 #include "driver/dac.h"
 #include "math.h"
 #include "Wire.h"
 
-// ================================================================
+// ==============================================================================================================================================
 // SAMPLE DE AUDIO (del código original)
-// ================================================================
+// ==============================================================================================================================================
 const int sampleLength = 48838;
 const int sampleRate = 11025;
 
@@ -3089,9 +3137,9 @@ const uint16_t sampleData[] PROGMEM = {
   2047,2047,2047,2047,2047,2047
 };
 
-// ================================================================
+// ==============================================================================================================================================
 // *** AGREGAR AQUÍ TU VECTOR DE 256 NOTAS ***
-// ================================================================
+// ==============================================================================================================================================
 const int SEQUENCE_LENGTH = 256;
 
 // *** PEGAR AQUÍ TU VECTOR SEQUENCE_NOTES[] COMPLETO ***
@@ -3468,9 +3516,9 @@ const float SEQUENCE_NOTES[] = {
 
 const float SEQUENCE_VELOCITY = 0.6;  // Aumentado de 0.394 a 0.6
 
-// ================================================================
+// ==============================================================================================================================================
 // CONFIGURACIÓN DE HARDWARE - PINES
-// ================================================================
+// ==============================================================================================================================================
 
 // Pines I2C para IMU
 const int SDA_PIN = 21;
@@ -3497,9 +3545,9 @@ const int LED_SYNTH4 = 2;     // Secuencia SYNTH LED 4
 const int BUTTON_SAMPLER = 18;  // Play/Stop SAMPLER
 const int BUTTON_SYNTH = 4;    // Play/Stop SYNTH
 
-// ================================================================
+// ==============================================================================================================================================
 // ENUMERACIÓN DE MODOS
-// ================================================================
+// ==============================================================================================================================================
 enum PlayMode {
   MODE_IDLE,     // Ninguno activo
   MODE_SAMPLER,  // SAMPLER activo
@@ -3508,18 +3556,18 @@ enum PlayMode {
 
 PlayMode currentMode = MODE_IDLE;
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL SAMPLER
-// ================================================================
+// ==============================================================================================================================================
 volatile bool sampler_playing = false;
 float samplePosition = 0.0;
 float pitchMultiplier = 1.0;
 unsigned long nextSampleTime = 0;
 unsigned long lastSamplerButtonTime = 0;
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL SYNTH (del código original)
-// ================================================================
+// ==============================================================================================================================================
 
 // IMU
 float imu_accel_x = 0.0;
@@ -3561,9 +3609,9 @@ bool audioPlaying = false;
 int waveform_type = 2;
 float phase = 0.0;
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DEL SAMPLER
-// ================================================================
+// ==============================================================================================================================================
 
 void startSampler() {
   if (sampler_playing) return;
@@ -3656,9 +3704,9 @@ void handleSamplerButton() {
   lastSamplerButtonState = currentSamplerButtonState;
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DEL SYNTH (del código original con modificaciones)
-// ================================================================
+// ==============================================================================================================================================
 
 void initIMU() {
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -3974,9 +4022,9 @@ void handleSynthButton() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN SETUP
-// ================================================================
+// ==============================================================================================================================================
 
 void setup() {
   // LEDs - MODIFICADO: Configurar los 4 LEDs existentes
@@ -4024,9 +4072,9 @@ void setup() {
   currentFreq = SEQUENCE_NOTES[0];
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN LOOP PRINCIPAL
-// ================================================================
+// ==============================================================================================================================================
 
 void loop() {
   static unsigned long lastAudioUpdate = 0;
@@ -4084,33 +4132,3 @@ void loop() {
     delayMicroseconds(100);
   }
 }
-
-/*
- * ================================================================
- * INSTRUCCIONES DE USO:
- * ================================================================
- * 
- * 1. AGREGAR TU SECUENCIA:
- *    - Busca "*** PEGAR AQUÍ TU VECTOR SEQUENCE_NOTES[] COMPLETO ***"
- *    - Reemplaza el array temporal con tus 256 notas
- * 
- * 2. CONEXIONES:
- *    - Botón PIN 18: SAMPLER Play/Stop
- *    - Botón PIN 19: SYNTH Play/Stop  
- *    - POT PIN 13: Pitch/Volumen
- *    - POT PIN 14: Attack (SYNTH)
- *    - POT PIN 12: Saturación (SYNTH)
- *    - POT PIN 27: Decay (SYNTH)
- *    - LEDs: 23,32,5,2 (SAMPLER: todos encendidos, SYNTH: secuencia)
- *    - Audio: PIN 25 (DAC)
- *    - IMU: SDA=21, SCL=22
- * 
- * 3. FUNCIONAMIENTO:
- *    - Solo un modo puede estar activo a la vez
- *    - Al activar un modo, el otro se detiene automáticamente
- *    - POT 13 controla Pitch en SAMPLER y Volumen en SYNTH
- *    - Los demás POTs solo afectan al SYNTH
- *    - SAMPLER: Los 4 LEDs se encienden juntos
- *    - SYNTH: Los 4 LEDs se alternan en secuencia (paso % 4)
- * ================================================================
- */

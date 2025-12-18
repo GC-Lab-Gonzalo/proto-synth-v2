@@ -1,74 +1,96 @@
-/*
- * ================================================================
- * OSCILADOR CUANTIZADO CON ESP32 - SINTONIZADO EN SI
- * ================================================================
- * 
- * ¿QUÉ ES UN OSCILADOR CUANTIZADO?
- * Un oscilador es un generador de frecuencias que produce ondas sonoras.
- * La "cuantización" significa que las frecuencias se ajustan automáticamente
- * a notas musicales reales en lugar de producir frecuencias continuas.
- * Este proyecto crea un sintetizador simple con onda cuadrada sintonizado
- * para tocar backing tracks en La en diferentes escalas musicales.
- * 
- * LIBRERÍAS NECESARIAS:
- * Este código usa librerías que ya vienen incluidas con Arduino IDE:
- * - "driver/dac.h" (para controlar el DAC del ESP32)
- * - "math.h" (funciones matemáticas como sin, cos, pow, log2)
- * 
- * HARDWARE DEL PROTO-SYNTH V2:
- * 
- * CONTROLES:
- * - Potenciómetro 1 (Pin 13): Controla la frecuencia/tono del oscilador
- * - Potenciómetro 2 (Pin 14): Controla la resonancia del filtro
- * - Potenciómetro 3 (Pin 12): Controla el volumen de salida
- * - Potenciómetro 4 (Pin 27): Controla la frecuencia de corte del filtro LPF
- * - Botón 1 (Pin 18): Cambia la escala musical
- * - Botón 2 (Pin 4): Activa/desactiva octava superior (toggle)
- * - DAC (Pin 25): Salida de audio → jack de audio del Proto-synth
- * 
- * ESCALAS MUSICALES DISPONIBLES:
- * 1. Mayor (Do-Re-Mi-Fa-Sol-La-Si) - Sonido alegre
- * 2. Menor Natural - Sonido melancólico
- * 3. Menor Armónica - Sonido exótico
- * 4. Árabe - Sonido oriental
- * 5. Lidia - Sonido etéreo
- * 6. Frigia - Sonido misterioso
- * 7. Locria - Sonido muy oscuro/dissonante
- * 
- * CARACTERÍSTICAS:
- * - Cuantización musical: Las frecuencias se "ajustan" a notas musicales reales
- * - 2 octavas de rango base (La3 a La5) + controles de octava
- * - Cambios instantáneos entre notas (sin glide/portamento)
- * - Silenciado automático cuando el potenciómetro está al mínimo
- * - 7 escalas musicales diferentes, todas centradas en LA
- * - Onda cuadrada para sonido digital característico
- * - Perfecto para backing tracks en tonalidad LA
- * 
- * INSTRUCCIONES DE USO:
- * 1. Carga el código al Proto-synth V2
- * 2. Gira el potenciómetro 1 para cambiar la frecuencia
- * 3. Gira el potenciómetro 2 para ajustar la resonancia del filtro
- * 4. Gira el potenciómetro 3 para ajustar el volumen
- * 5. Gira el potenciómetro 4 para ajustar el filtro
- * 6. Presiona el botón 1 para cambiar escalas musicales
- * 7. Presiona el botón 2 para activar/desactivar octava superior
- * 8. Gira pot1 al mínimo para silenciar
- * 9. Gira pot4 para filtro frec
- * ================================================================
- 
- Tiene un sonido extraño, y fue un momento de experimentación que no logre hacerme el tiempo para pulir, hay que mejorar 
 
- */
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - OSCILADOR CUANTIZADO - GC Lab Chile
+// ==============================================================================================================================================
 
-// ================================================================
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sintetizador simple con onda cuadrada sintonizado para tocar backing tracks en La en diferentes escalas musicales
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Frecuencia/tono del oscilador
+// - Potenciómetro 2: Resonancia del filtro
+// - Potenciómetro 3: Volumen de salida 
+// - Potenciómetro 4: Frecuencia de corte del filtro LPF
+// - Botón 1: Cambia la escala musical
+// - Botón 2: Activa/desactiva octava superior (toggle)
+// - Botón 3: No se usa
+// - Botón 4: No se usa
+// - LED 1: No se usa
+// - LED 2: No se usa
+// - LED 3: No se usa
+// - LED 4: No se usa
+// - IMU: No se usa
+// - LDR: Control de filtro LPF
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Gira el potenciómetro 1 para cambiar la frecuencia
+// 2. Gira el potenciómetro 2 para ajustar la resonancia del filtro
+// 3. Gira el potenciómetro 3 para ajustar el volumen
+// 4. Gira el potenciómetro 4 para ajustar la frecuencia de corte del filtro
+// 5. Presiona el botón 1 para cambiar escalas musicales
+// 6. Presiona el botón 2 para activar/desactivar octava superior
+// 7. Gira el potenciómetro 1 al mínimo para silenciar el audio
+//
+// INFORMACIÓN DEL CODIGO:
+// - ESCALAS MUSICALES DISPONIBLES:
+//   1. Mayor (Do-Re-Mi-Fa-Sol-La-Si) - Sonido alegre
+//   2. Menor Natural - Sonido melancólico
+//   3. Menor Armónica - Sonido exótico
+//   4. Árabe - Sonido oriental
+//   5. Lidia - Sonido etéreo
+//   6. Frigia - Sonido misterioso
+//   7. Locria - Sonido muy oscuro/dissonante
+// - Cuantización musical: Las frecuencias se "ajustan" a notas musicales reales
+// - 2 octavas de rango base (La3 a La5) + controles de octava
+// - Cambios instantáneos entre notas (sin glide/portamento)
+// - Silenciado automático cuando el potenciómetro está al mínimo
+// - 7 escalas musicales diferentes, todas centradas en LA
+// - Onda cuadrada para sonido digital característico
+// - Perfecto para backing tracks en tonalidad LA
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Tiene un sonido extraño, y fue un momento de experimentación que no logre hacerme el tiempo para pulir, hay que mejorar 
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
 // INCLUSIÓN DE LIBRERÍAS
-// ================================================================
+// ==============================================================================================================================================
 #include "driver/dac.h"  // Control del DAC (Digital to Analog Converter) del ESP32
 #include "math.h"        // Funciones matemáticas avanzadas
 
-// ================================================================
+// ==============================================================================================================================================
 // CONFIGURACIÓN DE HARDWARE - PINES
-// ================================================================
+// ==============================================================================================================================================
 const int POT_FREQ_PIN = 13;     // Potenciómetro 1 - control de frecuencia
 const int POT_RES_PIN = 14;      // Potenciómetro 2 - control de resonancia
 const int POT_VOL_PIN = 12;      // Potenciómetro 3 - control de volumen
@@ -77,18 +99,18 @@ const int SCALE_BTN_PIN = 18;    // Botón 1 - cambiar escala
 const int OCT_BTN_PIN = 4;       // Botón 2 - toggle octava superior
 const int DAC_PIN = 25;          // Salida de audio
 
-// ================================================================
+// ==============================================================================================================================================
 // CONFIGURACIÓN DEL OSCILADOR
-// ================================================================
+// ==============================================================================================================================================
 const int SAMPLE_RATE = 16000;   // Frecuencia de muestreo alta para mejor calidad
 const float BASE_FREQ = 127.0;   // Subiendo más para alcanzar Si3 exacto
 float current_frequency = 247.0; // Frecuencia actual (aproximadamente Si3)
 float phase = 0.0;               // Fase del oscilador
 int amplitude = 90;              // Amplitud actual (volumen)
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DEL FILTRO LPF CON RESONANCIA
-// ================================================================
+// ==============================================================================================================================================
 float filter_cutoff = 1000.0;   // Frecuencia de corte del filtro (Hz)
 float filter_resonance = 0.5;   // Resonancia del filtro (0.0 - 0.95)
 float filter_x1 = 0.0;          // Estado del filtro - entrada anterior
@@ -98,9 +120,9 @@ float filter_y2 = 0.0;          // Estado del filtro - salida anterior 2
 float filter_a0, filter_a1, filter_a2; // Coeficientes del filtro
 float filter_b1, filter_b2;     // Coeficientes del filtro
 
-// ================================================================
+// ==============================================================================================================================================
 // CONFIGURACIÓN MUSICAL
-// ================================================================
+// ==============================================================================================================================================
 int current_scale = 0;           // Escala actual (0-6)
 int current_note = 0;            // Nota actual (0-15)
 
@@ -115,9 +137,9 @@ const int scales[][8] = {
   {0, 1, 3, 5, 6, 8, 10, 12}    // Locria
 };
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES DE CONTROL
-// ================================================================
+// ==============================================================================================================================================
 bool scale_btn_last = HIGH;
 bool oct_btn_last = HIGH;
 bool octave_active = false;     // Estado de la octava (on/off)
@@ -126,9 +148,9 @@ unsigned long last_oct_press = 0;
 unsigned long last_update = 0;
 bool is_silenced = false;
 
-// ================================================================
+// ==============================================================================================================================================
 // SETUP - CONFIGURACIÓN INICIAL
-// ================================================================
+// ==============================================================================================================================================
 void setup() {
   // Configurar pines
   pinMode(POT_FREQ_PIN, INPUT);
@@ -149,9 +171,9 @@ void setup() {
   update_filter_coefficients();
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // LOOP PRINCIPAL
-// ================================================================
+// ==============================================================================================================================================
 void loop() {
   unsigned long now = millis();
   
@@ -165,9 +187,9 @@ void loop() {
   generate_audio();
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // LEER CONTROLES
-// ================================================================
+// ==============================================================================================================================================
 void read_controls() {
   // BOTÓN DE ESCALA (con antirebote)
   bool scale_btn_now = digitalRead(SCALE_BTN_PIN);
@@ -231,9 +253,9 @@ void read_controls() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // ACTUALIZAR COEFICIENTES DEL FILTRO LPF
-// ================================================================
+// ==============================================================================================================================================
 void update_filter_coefficients() {
   // Calcular frecuencia normalizada (0-1, donde 1 = Nyquist = SAMPLE_RATE/2)
   float omega = 2.0 * PI * filter_cutoff / SAMPLE_RATE;
@@ -253,9 +275,9 @@ void update_filter_coefficients() {
   filter_b2 = (1.0 - alpha) / norm;
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // APLICAR FILTRO LPF CON RESONANCIA
-// ================================================================
+// ==============================================================================================================================================
 float apply_filter(float input) {
   // Filtro biquad: y[n] = a0*x[n] + a1*x[n-1] + a2*x[n-2] - b1*y[n-1] - b2*y[n-2]
   float output = filter_a0 * input + filter_a1 * filter_x1 + filter_a2 * filter_x2 
@@ -269,9 +291,9 @@ float apply_filter(float input) {
   
   return output;
 }
-// ================================================================
+// ==============================================================================================================================================
 // CALCULAR FRECUENCIA SEGÚN NOTA Y OCTAVAS
-// ================================================================
+// ==============================================================================================================================================
 void calculate_frequency() {
   if (current_note < 0 || current_note > 15) {
     current_frequency = 0;
@@ -297,9 +319,9 @@ void calculate_frequency() {
   current_frequency = BASE_FREQ * pow(2.0, total_semitones / 12.0);
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // GENERAR AUDIO CON ONDA CUADRADA Y FILTRO LPF
-// ================================================================
+// ==============================================================================================================================================
 void generate_audio() {
   if (is_silenced || current_frequency <= 0) {
     dac_output_voltage(DAC_CHANNEL_1, 128);

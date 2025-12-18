@@ -1,31 +1,80 @@
-/*
-  Dron de 4 osciladores para ESP32 - Múltiples escalas musicales
-  Cada potenciómetro controla directamente un oscilador
-  Los 4 botones cambian entre escalas: Frigio, Lidio, Eólico, Menor Armónica
-  Potenciómetro en 0 = silencio
-  
-  Circuit:
-    Audio output on DAC pin 25
-    
-    Potenciómetros:
-    - Pin 12: Frecuencia oscilador 1
-    - Pin 13: Frecuencia oscilador 2  
-    - Pin 14: Frecuencia oscilador 3
-    - Pin 27: Frecuencia oscilador 4
-    
-    Botones (con pull-up interno):
-    - Pin 18: Modo Frigio
-    - Pin 4:  Modo Lidio  
-    - Pin 15: Modo Eólico
-    - Pin 19: Menor Armónica
-*/
 
-#define MOZZI_CONTROL_RATE 256
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - OSCILADOR 4 ESCALAS - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sintetizador de dron basado en 4 osciladores de onda sierra, con 4 modos de escala musical seleccionables.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Oscilador 1
+// - Potenciómetro 2: Oscilador 2
+// - Potenciómetro 3: Oscilador 3 
+// - Potenciómetro 4: Oscilador 4
+// - Botón 1: Modo frigio
+// - Botón 2: Modo lidio  
+// - Botón 3: Modo eólico
+// - Botón 4: Menor armónica
+// - LED 1: Indica modo frigio
+// - LED 2: Indica modo lidio 
+// - LED 3: Indica modo eólico
+// - LED 4: Indica modo menor armónico
+// - IMU: No se usa
+// - LDR: Control de filtro LPF
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Gira los potenciometros para definir los tonos de cada oscilador dentro de la escala seleccionada.
+// 2. Presiona los botones para cambiar entre las 4 escalas musicales disponibles.
+// 3. Ajusta el LDR para modificar la frecuencia de corte del filtro pasa-bajos aplicado a la mezcla de los osciladores.
+//
+// INFORMACIÓN DEL CODIGO:
+// - Es necesario instalar la libreria Mozzi.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <Mozzi.h>
 #include <Oscil.h>
 #include <tables/saw2048_int8.h>
 #include <LowPassFilter.h>
 
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
+#define MOZZI_CONTROL_RATE 256
 #define POT1_PIN 12
 #define POT2_PIN 13
 #define POT3_PIN 14
@@ -44,6 +93,9 @@
 #define LED3_PIN 32  // LED 3 - Oscilador 3
 #define LED4_PIN 2   // LED 4 - Oscilador 4
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // 4 osciladores de audio con onda sierra
 Oscil<SAW2048_NUM_CELLS, MOZZI_AUDIO_RATE> aSaw0(SAW2048_DATA);
 Oscil<SAW2048_NUM_CELLS, MOZZI_AUDIO_RATE> aSaw1(SAW2048_DATA);

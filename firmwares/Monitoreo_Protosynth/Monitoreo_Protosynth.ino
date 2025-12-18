@@ -1,18 +1,76 @@
-/*
- * Monitoreo - Proto-Synth ESP32
- * Desarrollado para probar botones y potenciometros del Proto-Synth de GC Lab Chile
- * 
- *  INSTRUCCIONES
- * 
-    - Carga el codigo
-    - Abre el monitor serial o monitor plotter
-    - Mueve los potenciometros y presiona los botones
-    - Observa como reacciona el monitor serial
- */
 
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - MONITOREO - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Este código implementa un sistema de monitoreo para el Proto-Synth V2. 
+// Permite interactuar con botones, potenciómetros, un sensor de luz, un micrófono y un sensor de movimiento MPU6050. 
+// Los datos recopilados se envían al monitor serial para visualización en tiempo real. 
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Solo Diagnostico
+// - Potenciómetro 2: Solo Diagnostico
+// - Potenciómetro 3: Solo Diagnostico 
+// - Potenciómetro 4: Solo Diagnostico
+// - Botón 1: Solo Diagnostico
+// - Botón 2: Solo Diagnostico
+// - Botón 3: Solo Diagnostico
+// - Botón 4: Solo Diagnostico
+// - LED 1: Solo Diagnostico
+// - LED 2: Solo Diagnostico
+// - LED 3: Solo Diagnostico
+// - LED 4: Solo Diagnostico
+// - IMU: Solo Diagnostico
+// - LDR: Solo Diagnostico
+// - Micrófono: Solo Diagnostico
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Carga el codigo
+// 2. Abre el monitor serial o monitor plotter
+// 3. Mueve los potenciometros y presiona los botones
+// 4. Observa como reacciona el monitor serial
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <Wire.h>
 
-// Definición de pines según el diagrama
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 #define BOTON_1 18
 #define BOTON_2 4
 #define BOTON_3 15
@@ -34,6 +92,9 @@
 // Dirección I2C del MPU6050
 #define MPU6050_ADDR 0x68
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Variables para almacenar lecturas
 int boton1, boton2, boton3, boton4;
 int pot1, pot2, pot3, pot4;

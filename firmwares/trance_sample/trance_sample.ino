@@ -1,31 +1,77 @@
-/*
- * ===============================================
- * PROTO-SYNTH V2.0 - ARPEGGIATOR ENGINE CON SATURACIÓN
- * ===============================================
- * 
- * CONTROLES OPTIMIZADOS: (están invertidos)
 
- * - POTENCIÓMETRO 1 (Pin 13): TEMPO (60-180 BPM)
- * - POTENCIÓMETRO 2 (Pin 14): VOLUMEN (0-100%)
- * - POTENCIÓMETRO 3 (Pin 12): SATURACIÓN/DRIVE (1x-10x)
- * - POTENCIÓMETRO 4 (Pin 27): PITCH GLOBAL (-60 a +12 semitonos)
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - ARPEGGIATOR ENGINE CON SATURACIÓN - GC Lab Chile
+// ==============================================================================================================================================
 
- * - BOTÓN 1 (Pin 18): Grabar/Parar grabación
- * - BOTÓN 2 (Pin 4): Play/Stop secuenciador
- * - BOTÓN 3 (Pin 15): Cambiar patrón de trance (16 patrones)
- * - BOTÓN 4 (Pin 19): Cambiar longitud de secuencia (4/8/16 steps)
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
- * - IMU (I2C): Control de filtro LPF (X=Frecuencia, Y=Resonancia)
- * - ESCALA FIJA: Menor Natural (octava normal)
- * 
- * MEJORAS:
- * - Delay post-grabación configurable (POST_RECORDING_DELAY = 100ms)
- * - Evita ruido del botón en el sample grabado
- * - Auto-start después del delay
- * - Rango ajustable: 50ms, 100ms, 150ms, 200ms o más según necesidad
- * 
- */
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Arpegeador de trance optimizado con saturación y control de filtro LPF mediante IMU.
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: TEMPO (60-180 BPM)
+// - Potenciómetro 2: VOLUMEN (0-100%)
+// - Potenciómetro 3: SATURACIÓN/DRIVE (1x-10x) 
+// - Potenciómetro 4: PITCH GLOBAL (-60 a +12 semitonos)
+// - Botón 1: Grabar/Parar grabación
+// - Botón 2: Play/Stop secuenciador
+// - Botón 3: Cambiar patrón de trance (16 patrones)
+// - Botón 4: Cambiar longitud de secuencia (4/8/16 steps)
+// - LED 1: Indicador de sequencia
+// - LED 2: Indicador de sequencia
+// - LED 3: Indicador de sequencia
+// - LED 4: Indicador de sequencia
+// - IMU: Control de filtro LPF
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Grabar un sample pulsando el Botón 1.
+// 2. Ajustar los controles de expresión según preferencia.
+// 3. Pulsar el Botón 2 para iniciar el arpegiador.
+// 4. Cambiar patrón y longitud con los Botones 3 y 4 según necesidad.
+//
+// INFORMACIÓN DEL CÓDIGO:
+// - ESCALA FIJA: Menor Natural (octava normal)
+// - Delay post-grabación configurable (POST_RECORDING_DELAY = 800ms)
+// - Evita ruido del botón en el sample grabado
+// - Auto-start después del delay
+// - Rango ajustable: 50ms, 100ms, 150ms, 200ms o más según necesidad
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Los potenciometros están invertidos.
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <driver/adc.h>
 #include <driver/dac.h>
 #include <Arduino.h>
@@ -36,6 +82,9 @@
 #define MPU6050_PWR_MGMT_1 0x6B
 #define MPU6050_ACCEL_XOUT_H 0x3B
 
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 // Pines Hardware
 const int MIC_PIN = 33;
 const int REC_BTN = 18;
@@ -51,6 +100,9 @@ const int LED2 = 32;
 const int LED3 = 5;
 const int LED4 = 2;
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Configuración de audio
 const int SAMPLE_RATE = 22000;
 const int MAX_SAMPLES = 33000;

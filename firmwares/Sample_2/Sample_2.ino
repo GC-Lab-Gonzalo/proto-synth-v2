@@ -1,23 +1,80 @@
-/*
-Sample 2 - Proto-Synth version 2
 
-    boton 1  grabar
-    Botón 2 play/stop
-    Botón 3 reversa (mientras presionado)
-    Botón 4 loop toggle
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - Sample 2 - GC Lab Chile
+// ==============================================================================================================================================
 
-    // Potenciómetros
-    potenciometro 1 Control de velocidad/tempo
-    potenciometro 2 Punto de inicio del sample
-    potenciometro 3 Punto final/duración del sample
-    potenciometro 4 Control de pitch (sin cambiar tempo)
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sampler avanzado con grabación, reproducción en bucle, control de pitch, selección de fragmento y efecto de reversa.
+// ==============================================================================================================================================
 
-*/
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Control de velocidad/tempo
+// - Potenciómetro 2: Punto de inicio del sample
+// - Potenciómetro 3: Punto final/duración del sample 
+// - Potenciómetro 4: Control de pitch (sin cambiar tempo)
+// - Botón 1: Grabar
+// - Botón 2: Play/stop
+// - Botón 3: Reversa (mientras presionado)
+// - Botón 4: Loop toggle
+// - LED 1: Grabación/VU meter
+// - LED 2: Reproducción/VU meter
+// - LED 3: VU meter
+// - LED 4: VU meter
+// - IMU: No se usa
+// - LDR: No se usa
+// - Micrófono: Grabadora
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Graba pulsando el botón 1
+// 2. Reproduce/para con el botón 2
+// 3. Mantén presionado el botón 3 para reproducir en reversa
+// 4. Activa/desactiva el modo loop con el botón 4
+// 5. Ajusta la velocidad/tempo con el potenciómetro 1
+// 6. Ajusta el punto de inicio del sample con el potenciómetro 2
+// 7. Ajusta el punto final/duración del sample con el potenciómetro 3
+// 8. Ajusta el pitch (sin cambiar tempo) con el potenciómetro 4 
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <driver/adc.h>
 #include <driver/dac.h>
 #include <Arduino.h>
 
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 // Pines Proto-Synth V2.0
 const int MIC_PIN = 33;          // Micrófono
 const int AUDIO_OUT_PIN = 25;    // Salida DAC
@@ -40,6 +97,10 @@ const int LED2 = 32;
 const int LED3 = 2;
 const int LED4 = 5;
 
+
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Configuración de audio
 const int SAMPLE_RATE = 11000;   // 11kHz para ~5 segundos
 const int MAX_SAMPLES = 55000;   // ~5 segundos a 11kHz (110KB)

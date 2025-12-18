@@ -1,44 +1,101 @@
-/*
-PROTO-SYNTH V2 - IDIOTEQUE SAMPLE  (RADIOHEAD)
 
-===== INSTRUCCIONES DE USO =====
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - IDIOTEQUE SAMPLE (RADIOHEAD) - GC Lab Chile
+// ==============================================================================================================================================
 
-1. CONEXIONES (según tu diagrama):
-   - Botón 1: PIN 18 a GND (con pull-up interno)
-   - Botón 2: PIN 4 a GND (con pull-up interno)
-   - Botón 3: PIN 15 a GND (con pull-up interno)
-   - Botón 4: PIN 19 a GND (con pull-up interno)
-   - Potenciómetro: Centro a PIN 13, extremos a 3.3V y GND
-   - LEDs: PINs 23, 32, 5, 2 con resistencias a GND
-   - Audio: PIN 25 (DAC automático)
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
 
-2. FUNCIONAMIENTO:
-   - Presiona cualquier botón para reproducir el sample correspondiente
-   - Si un sample está reproduciéndose, presionar su botón lo detiene
-   - Solo un sample puede reproducirse a la vez
-   - El potenciómetro controla el pitch (0.5x - 2.0x velocidad)
-   - Los LEDs indican qué sample está activo
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sampler simple de 4 samples basado en el tema "Idioteque" de Radiohead.
+// ==============================================================================================================================================
 
-3. PARA COMPLETAR EL CÓDIGO:
-   - Reemplaza los datos de sample2Data, sample3Data y sample4Data
-   - con los arrays completos de tus samples 2, 3 y 4
-   - Mantén el formato PROGMEM para ahorrar RAM
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: Pitch (0.5x - 2.0x velocidad)
+// - Potenciómetro 2: No se usa
+// - Potenciómetro 3: No se usa
+// - Potenciómetro 4: No se usa
+// - Botón 1: Lanza Sample 1
+// - Botón 2: Lanza Sample 2
+// - Botón 3: Lanza Sample 3
+// - Botón 4: Lanza Sample 4
+// - LED 1: Sample 1 Activo
+// - LED 2: Sample 2 Activo
+// - LED 3: Sample 3 Activo
+// - LED 4: Sample 4 Activo
+// - IMU: No se usa
+// - LDR: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Presiona cualquier botón para reproducir, detener o cambiar el sample que está sonando, solo un sample 
+//    puede reproducirse a la vez, los LEDs indican el sample activo.
+// 2. Puedes cambiar el pitch ysando el potenciometro 1.
+//
+// INFORMACIÓN DEL CODIGO:
+// - Reemplaza los datos de sample2Data, sample3Data y sample4Data con los arrays completos de tus samples 2, 3 y 4.
+// - Mantén el formato PROGMEM para ahorrar RAM.
+// - Los samples se detienen automáticamente al terminar.
+// - El debounce evita múltiples activaciones accidentales.
+// ==============================================================================================================================================
 
-4. TIPS:
-   - Los samples se detienen automáticamente al terminar
-   - El debounce evita múltiples activaciones accidentales
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Falta control de volumen.
+// - Hay 2 potenciometros aún disponibles para agregar mas controles de síntesis o efectos.
+// - No copies y pegues este codigo en un LLM, es muy grande, si lo haces procura hacer una copia de los samples y luego 
+//   pasarle al LLM solo la logica sin los samples. 
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
 
-5. Mejoras:
-   - Falta control de volumen
-   - Tienes a disposicion mas potenciometros para mas controles de sintesis
-   - No copies y pegues este codigo en un LLM, es muy grande, si lo haces procura hacer una copia de los samples y luego pasarle al LLM solo la logica sin los samples 
-*/
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <driver/dac.h>
 #include <Arduino.h>
 
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
+const int BUTTON_1 = 18;    // Botón 1 pull-up
+const int BUTTON_2 = 4;     // Botón 2 pull-up  
+const int BUTTON_3 = 15;    // Botón 3 pull-up
+const int BUTTON_4 = 19;    // Botón 4 pull-up
+const int PITCH_POT = 13;   // Potenciómetro 1
+const int LED_1 = 23;       // LED 1
+const int LED_2 = 32;       // LED 2
+const int LED_3 = 5;        // LED 3
+const int LED_4 = 2;        // LED 4
+// DAC automático en PIN 25
+
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // ===== SAMPLES DATA =====
-const int sample1Length = 17572;
 const int sampleRate = 11025;
+// Sample 1 - Aquí debes poner los datos de tu sample1
+const int sample1Length = 17572;
 const uint16_t sample1Data[] PROGMEM = {
   2047,2043,2039,2037,2039,2036,2034,2034,2031,2033,2049,2065,2082,2102,2097,2078,
   2081,2076,2041,2022,2021,1987,1952,1965,1985,2018,2081,2109,2070,2030,2008,1979,
@@ -1141,7 +1198,7 @@ const uint16_t sample1Data[] PROGMEM = {
   2044,2045,2046,2047
 };
 
-
+// Sample 2 - Aquí debes poner los datos de tu sample2
 const int sample2Length = 17227;
 const uint16_t sample2Data[] PROGMEM = {
     2047,2045,2042,2039,2041,2044,2047,2056,2069,2076,2088,2101,2112,2127,2127,2117,
@@ -2223,7 +2280,7 @@ const uint16_t sample2Data[] PROGMEM = {
   1942,1963,1984,2008,2025,2039,2050,2055,2055,2054,2049
 };
 
-
+// Sample 3 - Aquí debes poner los datos de tu sample3
 const int sample3Length = 18045;
 const uint16_t sample3Data[] PROGMEM = {
     2046,2042,2037,2034,2033,2038,2049,2063,2086,2132,2182,2209,2218,2221,2202,2169,
@@ -5009,18 +5066,6 @@ const uint16_t sample4Data[] PROGMEM = {
   2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,
   2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047,2047
 };
-
-// ===== PINES (según tu diagrama) =====
-const int BUTTON_1 = 18;    // Botón 1 pull-up
-const int BUTTON_2 = 4;     // Botón 2 pull-up  
-const int BUTTON_3 = 15;    // Botón 3 pull-up
-const int BUTTON_4 = 19;    // Botón 4 pull-up
-const int PITCH_POT = 13;   // Potenciómetro 1
-const int LED_1 = 23;       // LED 1
-const int LED_2 = 32;       // LED 2
-const int LED_3 = 5;        // LED 3
-const int LED_4 = 2;        // LED 4
-// DAC automático en PIN 25
 
 // ===== VARIABLES GLOBALES =====
 struct SamplePlayer {

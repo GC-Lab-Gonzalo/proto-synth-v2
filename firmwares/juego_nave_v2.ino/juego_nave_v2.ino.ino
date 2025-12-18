@@ -1,66 +1,101 @@
-/*
- * ================================================================
- * SPACE SHOOTER PARA ESP32 - CÓDIGO COMENTADO PARA PRINCIPIANTES
- * ================================================================
- * 
- * LIBRERÍAS NECESARIAS:
- * Antes de compilar, instala estas librerías en el IDE de Arduino:
- * 1. U8g2 (para la pantalla OLED) - Busca "U8g2" en el gestor de librerías
- * 2. Arduino.h y Wire.h ya vienen incluidas con Arduino IDE
- * 
- * CONEXIONES REQUERIDAS PARA PROTO-SYNTH V2:
- * 
- * IMPORTANTE: El Proto-synth V2 NO tiene pantalla OLED integrada.
- * Para usar este código necesitas:
- * 
- * PANTALLA OLED SH1106 (1.3") - Conexión I2C: - DEBES QUITAR EL IMU PARA LIBERAR ESTOS PINES
- * - VCC → 3.3V del Proto-synth
- * - GND → GND del Proto-synth  
- * - SCL → Pin 22 (SCL del ESP32) 
- * - SDA → Pin 21 (SDA del ESP32) 
- * 
- * CONTROLES DEL JUEGO (usando componentes del Proto-synth):
- * - Potenciómetro 3 (Pin 12): Mover nave horizontalmente
- * - Botón 1 (Pin 18): Iniciar juego y disparar 
- * - Botón 2 (Pin 4): Poder especial
- * - Botón 3 (Pin 15): Pausa y reiniciar
- * - DAC (Pin 25): Salida de audio (conecta a jack de audio del Proto-synth)
- * 
- * INSTRUCCIONES DE COMPILACIÓN:
- * 1. Instala la librería U8g2
- * 2. Retira físicamente el IMU del Proto-synth V2 para liberar pines I2C
- * 3. Conecta la pantalla OLED según el diagrama anterior
- * 4. Carga este código al ESP32
- * 5. ¡Disfruta el juego!
- * ================================================================
- */
 
-// ================================================================
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - SPACE SHOOTER - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Juego de disparos espacial que utiliza una pantalla OLED SH1106 para mostrar gráficos, botones y un potenciómetro para controles, 
+// y el DAC para generar sonidos. Incluye funciones para manejar el menú, el juego, las colisiones, los gráficos y los sonidos, 
+// con un sistema de puntuación y dificultad progresiva.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: No se usa
+// - Potenciómetro 2: No se usa
+// - Potenciómetro 3: Mover nave horizontalmente
+// - Potenciómetro 4: No se usa
+// - Botón 1: Iniciar juego y disparar 
+// - Botón 2: Poder especial
+// - Botón 3: Pausa y reiniciar
+// - Botón 4: No se usa
+// - LED 1: No se usa
+// - LED 2: No se usa
+// - LED 3: No se usa
+// - LED 4: No se usa
+// - IMU: Se reemplaza por una pantalla OLED I2C SH1106
+// - LDR: No se usa
+// - Micrófono: No se usa
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. 
+// MODO DE USO:.
+// 1. Conecta el Proto-synth V2 y observa la pantalla OLED para verificar el inicio del juego.
+// 2. Usa el potenciómetro 3 para mover la nave horizontalmente.
+// 3. Presiona el botón 1 para iniciar el juego y disparar.
+// 4. Presiona el botón 2 para activar el poder especial (cuando esté disponible).
+// 5. Presiona el botón 3 para pausar o reiniciar el juego.
+//
+// INFORMACIÓN DEL CODIGO:
+// - Se remplaza el uso del IMU por una pantalla OLED SH1106 para mostrar gráficos del juego.
+// - Es necesaria la librería U8g2 para controlar la pantalla OLED.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
 // INCLUSIÓN DE LIBRERÍAS
-// ================================================================
+// ==============================================================================================================================================
 #include <Arduino.h>    // Librería básica de Arduino (funciones principales)
 #include <U8g2lib.h>    // Librería para controlar pantallas OLED y LCD
 #include <Wire.h>       // Librería para comunicación I2C (pantalla OLED)
 
-// ================================================================
+// ==============================================================================================================================================
 // DEFINICIÓN DE PINES - ADAPTADO PARA PROTO-SYNTH V2
-// ================================================================
+// ==============================================================================================================================================
 #define POTENTIOMETER_PIN 12  // Potenciómetro 3 del Proto-synth (movimiento horizontal)
 #define START_FIRE_BTN_PIN 18 // Botón 1 del Proto-synth (iniciar/disparar)
 #define SPECIAL_BTN_PIN 4     // Botón 2 del Proto-synth (poder especial)
 #define PAUSE_RESET_BTN_PIN 15 // Botón 3 del Proto-synth (pausa/reiniciar)
 #define DAC_PIN 25            // DAC del Proto-synth (salida de audio)
 
-// ================================================================
+// ==============================================================================================================================================
 // CONFIGURACIÓN DE LA PANTALLA OLED
-// ================================================================
+// ==============================================================================================================================================
 // Crea objeto para controlar pantalla SH1106 de 128x64 píxeles via I2C
 // U8G2_R0 = sin rotación, U8X8_PIN_NONE = sin pin de reset
 U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
-// ================================================================
+// ==============================================================================================================================================
 // CONSTANTES DEL JUEGO (valores que no cambian)
-// ================================================================
+// ==============================================================================================================================================
 #define SCREEN_WIDTH 128      // Ancho de la pantalla en píxeles
 #define SCREEN_HEIGHT 64      // Alto de la pantalla en píxeles
 #define PLAYER_WIDTH 11       // Ancho de la nave del jugador
@@ -74,9 +109,9 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 #define FIRE_RATE 100         // Tiempo entre disparos (100ms = disparo rápido)
 #define SPECIAL_COOLDOWN 3000 // Tiempo de espera para poder especial (3 segundos)
 
-// ================================================================
+// ==============================================================================================================================================
 // ENUMERACIÓN - ESTADOS DEL JUEGO
-// ================================================================
+// ==============================================================================================================================================
 // Enum define los diferentes estados que puede tener el juego
 enum GameState {
   MENU,       // Pantalla de menú principal
@@ -85,9 +120,9 @@ enum GameState {
   GAME_OVER   // Pantalla de fin de juego
 };
 
-// ================================================================
+// ==============================================================================================================================================
 // ESTRUCTURAS DE DATOS - PLANTILLAS PARA OBJETOS DEL JUEGO
-// ================================================================
+// ==============================================================================================================================================
 
 // Estructura para las estrellas del fondo (efecto visual)
 struct Star {
@@ -117,9 +152,9 @@ struct Bullet {
   int noteIndex;  // Índice de nota musical para sonido
 };
 
-// ================================================================
+// ==============================================================================================================================================
 // VARIABLES GLOBALES DEL JUEGO
-// ================================================================
+// ==============================================================================================================================================
 
 // Estado actual del juego
 GameState gameState = MENU;
@@ -170,9 +205,9 @@ int potValue = 0;               // Valor actual del potenciómetro (0-4095)
 int lastPotValue = 0;           // Último valor del potenciómetro
 const int potDeadZone = 50;     // Zona muerta (evita movimiento nervioso)
 
-// ================================================================
+// ==============================================================================================================================================
 // ESCALAS MUSICALES Y SONIDOS
-// ================================================================
+// ==============================================================================================================================================
 
 // Notas musicales en escala menor armónica (frecuencias en Hz)
 const int scaleHarmonic[] = {
@@ -187,9 +222,9 @@ const int gameOverMelody[] = {11, 9, 7, 5, 4, 2, 0};       // Melodía de game o
 const int levelUpMelody[] = {0, 2, 4, 7, 9, 11, 12};       // Melodía de subir nivel
 const int specialArpeggio[] = {0, 2, 4, 7, 9, 11, 12, 14}; // Arpegio para poder especial
 
-// ================================================================
+// ==============================================================================================================================================
 // SPRITES - GRÁFICOS DE LAS NAVES (FORMATO BITMAP)
-// ================================================================
+// ==============================================================================================================================================
 
 // Nave del jugador (11x7 píxeles, pero almacenada como 8 bits por fila)
 const unsigned char playerShip[] = {
@@ -247,9 +282,9 @@ const unsigned char explosion3[] = {
   0b10000001   // *______*
 };
 
-// ================================================================
+// ==============================================================================================================================================
 // DECLARACIÓN DE FUNCIONES (prototipos)
-// ================================================================
+// ==============================================================================================================================================
 void initStars();           // Inicializar estrellas de fondo
 void moveStars();           // Mover estrellas hacia abajo
 void drawStars();           // Dibujar estrellas en pantalla
@@ -275,9 +310,9 @@ void resetGame();          // Reiniciar el juego
 void drawHUD();            // Dibujar interfaz (vidas, puntuación)
 void updateGameSpeed();    // Actualizar velocidad según puntuación
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN SETUP - SE EJECUTA UNA SOLA VEZ AL INICIAR
-// ================================================================
+// ==============================================================================================================================================
 void setup() {
   // Inicializar comunicación serie para debug (monitor serie)
   Serial.begin(115200);
@@ -305,9 +340,9 @@ void setup() {
   showMenuScreen(); // Mostrar pantalla de bienvenida
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE AUDIO - REPRODUCIR SONIDOS POR DAC
-// ================================================================
+// ==============================================================================================================================================
 
 // Reproduce una nota musical específica por el DAC
 void playDACNote(int frequency, int duration) {
@@ -356,9 +391,9 @@ void playMelody(const int melody[], int length, int tempo) {
   noteEndTime = millis();   // Actualizar tiempo de fin
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE PANTALLA - MOSTRAR DIFERENTES PANTALLAS DEL JUEGO
-// ================================================================
+// ==============================================================================================================================================
 
 // Muestra la pantalla de menú principal
 void showMenuScreen() {
@@ -426,9 +461,9 @@ void showGameOverScreen() {
   playMelody(gameOverMelody, 7, 150);
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE INICIALIZACIÓN Y REINICIO
-// ================================================================
+// ==============================================================================================================================================
 
 // Reinicia todas las variables del juego a su estado inicial
 void resetGame() {
@@ -480,9 +515,9 @@ void initStars() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE MOVIMIENTO Y DIBUJO DE ESTRELLAS
-// ================================================================
+// ==============================================================================================================================================
 
 // Mueve todas las estrellas hacia abajo
 void moveStars() {
@@ -517,9 +552,9 @@ void drawStars() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE CONTROL - POTENCIÓMETRO Y BOTONES
-// ================================================================
+// ==============================================================================================================================================
 
 // Lee el valor del potenciómetro y actualiza la posición del jugador
 void readPotentiometer() {
@@ -644,9 +679,9 @@ void handleButtons() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE DIBUJO DE SPRITES
-// ================================================================
+// ==============================================================================================================================================
 
 // Dibuja la nave del jugador en su posición actual
 void drawPlayer() {
@@ -666,9 +701,9 @@ void drawPlayer() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE BALAS Y DISPAROS
-// ================================================================
+// ==============================================================================================================================================
 
 // Crea una nueva bala desde la posición del jugador
 void fireBullet() {
@@ -770,9 +805,9 @@ void drawBullets() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIONES DE ENEMIGOS
-// ================================================================
+// ==============================================================================================================================================
 
 // Crea nuevos enemigos según la velocidad del juego
 void spawnEnemy() {
@@ -872,9 +907,9 @@ void drawEnemies() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE DETECCIÓN DE COLISIONES
-// ================================================================
+// ==============================================================================================================================================
 
 // Verifica colisiones entre todos los objetos del juego
 void checkCollisions() {
@@ -946,9 +981,9 @@ void checkCollisions() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE INTERFAZ DE USUARIO (HUD)
-// ================================================================
+// ==============================================================================================================================================
 
 // Dibuja la información del juego (puntuación, vidas, poder especial)
 void drawHUD() {
@@ -978,9 +1013,9 @@ void drawHUD() {
   }
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN DE VELOCIDAD DEL JUEGO
-// ================================================================
+// ==============================================================================================================================================
 
 // Actualiza la velocidad del juego según la puntuación
 void updateGameSpeed() {
@@ -991,9 +1026,9 @@ void updateGameSpeed() {
   if (gameSpeed > 2.0) gameSpeed = 2.0;  // Máximo 2x velocidad inicial
 }
 
-// ================================================================
+// ==============================================================================================================================================
 // FUNCIÓN PRINCIPAL LOOP - SE EJECUTA CONTINUAMENTE
-// ================================================================
+// ==============================================================================================================================================
 void loop() {
   unsigned long currentTime = millis();  // Tiempo actual
   

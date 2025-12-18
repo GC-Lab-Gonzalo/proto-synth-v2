@@ -1,33 +1,84 @@
-/*
- * ===============================================
- * PROTO-SYNTH V2.0 - AUDIO LIMPIO CON FILTRO LDR AJUSTADO
- * ===============================================
- * 
- * CONTROLES OPTIMIZADOS (POTENCIÓMETROS INVERTIDOS):
- * - POTENCIÓMETRO 1 (Pin 13): TEMPO (40-220 BPM) - INVERTIDO
- * - POTENCIÓMETRO 2 (Pin 14): VOLUMEN (0-100%) - INVERTIDO
- * - POTENCIÓMETRO 3 (Pin 12): ATAQUE/ATTACK (0-50ms) - INVERTIDO
- * - POTENCIÓMETRO 4 (Pin 27): PITCH GLOBAL (-60 a +12 semitonos) - INVERTIDO
- * - LDR (Pin 26): FILTRO LPF (500Hz-6000Hz, Q=3.5)
- * - BOTÓN 1 (Pin 18): Grabar/Parar grabación
- * - BOTÓN 2 (Pin 4): Play/Stop secuenciador
- * - BOTÓN 3 (Pin 15): Cambiar patrón de trance (16 patrones)
- * - BOTÓN 4 (Pin 19): Cambiar longitud de secuencia (4/8/16 steps)
- * - ESCALA FIJA: Menor Natural (octava normal)
- * 
- * AJUSTES APLICADOS:
- * - Resonancia del filtro aumentada (Q=3.5) para mejor efecto
- * - Ataque reducido a máximo 50ms para más sutileza
- * - Tempo mínimo bajado a 40 BPM para ritmos lentos
- * - Todos los potenciómetros invertidos (4095-valor)
- * 
- */
 
+// ==============================================================================================================================================
+// PROTO-SYNTH V2 - AUDIO LIMPIO CON FILTRO LDR AJUSTADO - GC Lab Chile
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// HARDWARE
+// ==============================================================================================================================================
+// - Microcontrolador ESP32 DevKit
+// - Sensor de movimiento IMU MPU6050 (acelerómetro/giroscopio I2C) |VCC -> 3.3V, GND -> GND, SCL -> PIN 22, SDA -> PIN 21| 
+// - 4 Botones con pull-up |1 -> PIN 18, 2 -> PIN 4, 3 -> PIN 15, 4 -> PIN 19|
+// - 4 LEDs indicadores |1 -> PIN 23, 2 -> PIN 32, 3 -> PIN 5, 4 -> PIN 2|
+// - 4 Potenciómetros analógicos |1 -> PIN 13, 2 -> PIN 14, 3 -> PIN 12, 4 -> PIN 27|
+// - Salida MIDI (Serial Hardware, 31250 baudio) |Pin TX0| 
+// - Sensor de luz LDR |Pin 26|
+// - Jack de audio DAC |Pin 25|
+// - Micrófono |Pin 33|
+// - 2 Headers para conexiones adicionales |1 -> PIN 34, 2 -> PIN 35|
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// DESCRIPCIÓN
+// ==============================================================================================================================================
+// Sampler de audio limpio con secuenciador de patrones trance.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// FUNCIONAMIENTO
+// ==============================================================================================================================================
+// CONTROLES DE EXPRESIÓN:
+// - Potenciómetro 1: TEMPO (40-220 BPM) - INVERTIDO
+// - Potenciómetro 2: VOLUMEN (0-100%) - INVERTIDO
+// - Potenciómetro 3: ATAQUE/ATTACK (0-50ms) - INVERTIDO 
+// - Potenciómetro 4: PITCH GLOBAL (-60 a +12 semitonos) - INVERTIDO
+// - Botón 1: Grabar/Parar grabación
+// - Botón 2: Play/Stop secuenciador
+// - Botón 3: Cambiar patrón de trance (16 patrones)
+// - Botón 4: Cambiar longitud de secuencia (4/8/16 steps)
+// - LED 1: Indicador de secuencia
+// - LED 2: Indicador de secuencia
+// - LED 3: Indicador de secuencia
+// - LED 4: Indicador de secuencia
+// - IMU: No se usa
+// - LDR: Control de filtro LPF (500Hz-6000Hz, Q=3.5)
+// - Micrófono: Grabadora
+// - Header 1: No se usa
+// - Header 2: No se usa
+// - Salida MIDI: No se usa
+//
+// MODO DE USO:
+// 1. Presiona el Botón 1 para iniciar la grabación.
+// 2. Habla o reproduce un sonido cerca del micrófono para grabar.
+// 3. Presiona el Botón 1 nuevamente para detener la grabación.
+// 4. Ajusta el Potenciómetro 1 (TEMPO), Potenciómetro 2 (VOLUMEN), Potenciómetro 3 (ATAQUE) y Potenciómetro 4 (PITCH) según tu preferencia.
+// 5. Presiona el Botón 2 para iniciar el secuenciador.
+// 6. Usa el Botón 3 para cambiar entre los 16 patrones de trance.
+// 7. Usa el Botón 4 para cambiar la longitud de la secuencia entre 4, 8 y 16 pasos.
+// 8. Ajusta la LDR para modificar el filtro LPF en tiempo real mientras se reproduce la secuencia.
+//
+// INFORMACIÓN DEL CODIGO:
+// - ESCALA FIJA: Menor Natural (octava normal)
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// COMENTARIOS
+// ==============================================================================================================================================
+// - Todos los potenciómetros invertidos (4095-valor)
+// - Para subir código exitosamente, asegúrate de que el Potenciómetro 3 esté girado al máximo.
+// - Los Pines 2,4,12,13,14,15,25,26,27 no van a funcionar si el Bluetooth está activado ya que están conectados al ADC2 del ESP32.
+// ==============================================================================================================================================
+
+// ==============================================================================================================================================
+// INCLUSIÓN DE LIBRERÍAS
+// ==============================================================================================================================================
 #include <driver/adc.h>
 #include <driver/dac.h>
 #include <Arduino.h>
 
-// Pines Hardware
+// ==============================================================================================================================================
+// CONFIGURACIÓN DE HARDWARE - PINES
+// ==============================================================================================================================================
 const int MIC_PIN = 33;
 const int REC_BTN = 18;
 const int PLAY_BTN = 4;
@@ -43,6 +94,9 @@ const int LED2 = 32;
 const int LED3 = 5;
 const int LED4 = 2;
 
+// ==============================================================================================================================================
+// PROGRAMA
+// ==============================================================================================================================================
 // Configuración de audio
 const int SAMPLE_RATE = 22000;
 const int MAX_SAMPLES = 33000;
