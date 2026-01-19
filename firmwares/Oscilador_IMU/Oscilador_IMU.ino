@@ -2,7 +2,14 @@
 // ==============================================================================================================================================
 // PROTO-SYNTH V2 - IMU Controlled Synth - GC Lab Chile
 // ==============================================================================================================================================
-
+// Desarrollado por: Gonzalo - GC Lab Chile
+// Licencia de Software: MIT License (https://opensource.org/licenses/MIT)
+// Licencia de Hardware: CERN Open Hardware Licence v2 - Permissive (CERN-OHL-P)
+//
+// Puedes usar, modificar y distribuir este código y hardware, siempre que se mantenga
+// la atribución a GC Lab Chile. Se entrega "tal cual", sin garantías de ningún tipo.
+// ==============================================================================================================================================
+// REPOSITORIO: https://github.com/GC-Lab-Gonzalo/proto-synth-v2
 // ==============================================================================================================================================
 // HARDWARE
 // ==============================================================================================================================================

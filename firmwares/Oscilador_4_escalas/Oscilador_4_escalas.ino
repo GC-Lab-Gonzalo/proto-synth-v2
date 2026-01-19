@@ -2,7 +2,15 @@
 // ==============================================================================================================================================
 // PROTO-SYNTH V2 - OSCILADOR 4 ESCALAS - GC Lab Chile
 // ==============================================================================================================================================
-
+// Desarrollado por: Gonzalo - GC Lab Chile
+// Licencia de Software: MIT License (https://opensource.org/licenses/MIT)
+// Licencia de Hardware: CERN Open Hardware Licence v2 - Permissive (CERN-OHL-P)
+//
+// Puedes usar, modificar y distribuir este código y hardware, siempre que se mantenga
+// la atribución a GC Lab Chile. Se entrega "tal cual", sin garantías de ningún tipo.
+// ==============================================================================================================================================
+// VIDEO en YOUTUBE: https://www.youtube.com/watch?v=xVOUEAsaYBg
+// REPOSITORIO: https://github.com/GC-Lab-Gonzalo/proto-synth-v2
 // ==============================================================================================================================================
 // HARDWARE
 // ==============================================================================================================================================
@@ -52,8 +60,18 @@
 // 2. Presiona los botones para cambiar entre las 4 escalas musicales disponibles.
 // 3. Ajusta el LDR para modificar la frecuencia de corte del filtro pasa-bajos aplicado a la mezcla de los osciladores.
 //
+
+// ==============================================================================================================================================
+
 // INFORMACIÓN DEL CODIGO:
 // - Es necesario instalar la libreria Mozzi.
+//Mozzi documentation/API
+// https://sensorium.github.io/Mozzi/doc/html/index.html
+// Mozzi help/discussion/announcements:
+// https://groups.google.com/forum/#!forum/mozzi-users
+// Copyright 2012-2024 Tim Barrass and the Mozzi Team
+// Mozzi is licensed under the GNU Lesser General Public Licence (LGPL) Version 2.1 or later.
+
 // ==============================================================================================================================================
 
 // ==============================================================================================================================================
