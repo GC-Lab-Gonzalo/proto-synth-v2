@@ -14,3 +14,18 @@ fp-info-cache
 # Sistema Operativo
 .DS_Store
 Thumbs.db
+
+GUIA_TALLER.md
+GUIA_VIDEO_SYNTH.md
+
+# Claude Code (configuración local)
+.claude/
+.mcp.json
+
+# Videos y archivos de muestra
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.m4v

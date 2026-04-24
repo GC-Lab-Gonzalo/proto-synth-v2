@@ -47,12 +47,12 @@
 // - LED 2: Paso 2
 // - LED 3: Paso 3
 // - LED 4: Paso 4
-// - IMU: Control MIDI
+// - IMU: Control MIDI CC1 (Modulation) → Canal MIDI 2
 // - LDR: No se usa
 // - Micrófono: No se usa
 // - Header 1: No se usa
 // - Header 2: No se usa
-// - Salida MIDI: Salida de sequencias y control
+// - Salida MIDI: Notas del secuenciador en Canal 1 / CC del IMU en Canal 2
 //
 // MODO DE USO:
 // 1. Conectar Proto-Synth a DAW/sintetizador via MIDI (o por USB MIDI serial utilizando Hairless MIDI y cambiando el baudio de 31250 a 115200)
@@ -109,8 +109,11 @@ const int octaveBases[] = {36, 48, 60};
 
 // Variables para modos y controles
 int currentStep = 0;
-unsigned long lastStepTime = 0;
 int interval = 500;
+
+// Timer de hardware para el secuenciador (evita pérdida de pasos por bloqueos I2C)
+hw_timer_t *timerPasos = NULL;
+volatile bool pasoActivo = false;
 
 // Variables para efectos visuales no bloqueantes
 enum EffectType {
@@ -152,7 +155,7 @@ unsigned long lastMPURead = 0;
 const unsigned long MPU_READ_INTERVAL = 10; // Leer cada 10ms para mayor resolución
 int lastCutoffValue = 64; // Valor inicial centrado
 int smoothCutoffValue = 64; // Valor suavizado
-const int CUTOFF_CC = 1;
+const int CUTOFF_CC = 86;
 
 // Variables para suavizado y optimización del IMU
 float angleYFiltered = 0;
@@ -160,7 +163,9 @@ const float FILTER_ALPHA = 0.3; // Factor de suavizado (0.0 = muy suave, 1.0 = s
 const int MIN_CC_CHANGE = 1; // Cambio mínimo para enviar CC
 const int NOISE_THRESHOLD = 100; // Umbral para ruido del acelerómetro
 unsigned long lastCCSent = 0;
-const unsigned long MIN_CC_INTERVAL = 5; // Mínimo 5ms entre envíos de CC
+const unsigned long MIN_CC_INTERVAL = 30; // 30ms entre CCs (~33/s) para no saturar el bus MIDI
+unsigned long lastNoteTime = 0;
+const unsigned long NOTE_BLACKOUT_MS = 25; // Pausar CC 25ms tras enviar nota (prioridad a notas)
 
 // Variables para el estado de los botones con Bounce2
 Bounce buttonSpeedUp = Bounce();
@@ -194,6 +199,16 @@ inline void sendMidiCC(byte controller, byte value, byte channel) {
   Serial.write(value);
 }
 
+// ISR del timer: solo activa la bandera, la nota se envía en loop()
+void IRAM_ATTR ISR_Paso() {
+  pasoActivo = true;
+}
+
+// Actualiza el período del timer cuando cambia la velocidad
+void actualizarTimer() {
+  timerAlarm(timerPasos, (uint64_t)interval * 1000, true, 0);
+}
+
 void setup() {
   // Deshabilitar logging y configurar Serial para MIDI
   esp_log_level_set("*", ESP_LOG_NONE);
@@ -202,9 +217,10 @@ void setup() {
   
   Serial.begin(31250, SERIAL_8N1, 3, 1); // RX=3, TX=1 (TX0)
   
-  // Inicializar I2C con velocidad optimizada
+  // Inicializar I2C con velocidad optimizada y timeout anti-bloqueo
   Wire.begin();
   Wire.setClock(400000); // 400kHz para I2C rápido
+  Wire.setTimeOut(3);    // 3ms máximo por transacción I2C (evita bloquear el loop)
   initMPU6050();
   
   // Configuración de pines
@@ -232,7 +248,13 @@ void setup() {
   buttonOctave.interval(15);
   
   interval = speedLevels[speedStep];
-  
+
+  // Inicializar timer de hardware para el secuenciador
+  // API ESP32 Arduino 3.x: timerBegin(frecuencia_Hz) → 1MHz = 1 tick/µs
+  timerPasos = timerBegin(1000000);
+  timerAttachInterrupt(timerPasos, &ISR_Paso);
+  timerAlarm(timerPasos, (uint64_t)interval * 1000, true, 0); // interval ms → µs, autoreload, infinito
+
   // Lectura inicial del MPU para estabilizar
   for(int i = 0; i < 10; i++) {
     readMPU6050();
@@ -244,29 +266,24 @@ void setup() {
 
 void loop() {
   unsigned long currentTime = millis();
-  
-  // Prioridad 1: Actualizar IMU (más frecuente)
-  updateCutoffFromMPU(currentTime);
-  
-  // Prioridad 2: Control de secuencia temporal
-  if (currentTime - lastStepTime >= interval) {
-    lastStepTime = currentTime;
-    
+
+  // Prioridad 1: Paso del secuenciador (accionado por timer de hardware, tiempo exacto)
+  if (pasoActivo) {
+    pasoActivo = false;
     currentStep = (currentStep + 1) % 4;
-    
-    // Actualizar LEDs solo si no hay efecto activo
     if (currentEffect == NO_EFFECT) {
       updateStepLEDs();
     }
-    
-    // Reproducir nota del paso actual
     playNoteFromCurrentStep();
   }
-  
-  // Prioridad 3: Botones (menos crítico)
+
+  // Prioridad 2: Actualizar IMU y enviar CC
+  updateCutoffFromMPU(currentTime);
+
+  // Prioridad 3: Botones
   updateButtons();
-  
-  // Prioridad 4: Efectos visuales (menos crítico)
+
+  // Prioridad 4: Efectos visuales
   handleVisualEffects();
 }
 
@@ -297,11 +314,17 @@ void updateCutoffFromMPU(unsigned long currentTime) {
       // Suavizado adicional del valor final
       smoothCutoffValue = (smoothCutoffValue * 3 + targetCutoffValue) / 4;
       
-      // Enviar CC solo si hay cambio suficiente y ha pasado tiempo mínimo
-      if (abs(smoothCutoffValue - lastCutoffValue) >= MIN_CC_CHANGE && 
-          currentTime - lastCCSent >= MIN_CC_INTERVAL) {
-        
-        sendMidiCC(CUTOFF_CC, smoothCutoffValue, 1);
+      // Calcular tiempo hasta el próximo paso (para la ventana pre-nota)
+      unsigned long proximoPaso = lastNoteTime + (unsigned long)interval;
+      unsigned long hastaProximo = (currentTime < proximoPaso) ? (proximoPaso - currentTime) : 0;
+
+      // Enviar CC solo fuera de las ventanas de nota (post-nota y pre-nota)
+      if (abs(smoothCutoffValue - lastCutoffValue) >= MIN_CC_CHANGE &&
+          currentTime - lastCCSent >= MIN_CC_INTERVAL &&
+          currentTime - lastNoteTime >= NOTE_BLACKOUT_MS && // ventana post-nota: 25ms
+          hastaProximo > 8) {                               // ventana pre-nota: 8ms
+
+        sendMidiCC(CUTOFF_CC, smoothCutoffValue, 2); // Canal 2 separado de las notas (canal 1)
         lastCutoffValue = smoothCutoffValue;
         lastCCSent = currentTime;
       }
@@ -330,14 +353,16 @@ void updateButtons() {
     if (speedStep < maxSpeedStep) {
       speedStep++;
       interval = speedLevels[speedStep];
+      actualizarTimer();
       startEffect(SPEED_EFFECT);
     }
   }
-  
+
   if (buttonSpeedDown.fell()) {
     if (speedStep > 0) {
       speedStep--;
       interval = speedLevels[speedStep];
+      actualizarTimer();
       startEffect(SPEED_EFFECT);
     }
   }
@@ -354,15 +379,14 @@ void updateButtons() {
 }
 
 void playNoteFromCurrentStep() {
-  // Detener nota anterior de forma más eficiente
   if (lastNotePlayed != 0) {
     sendMidiNoteOff(lastNotePlayed, 0, 1);
     lastNotePlayed = 0;
   }
   
-  // Obtener valor del potenciómetro
+  // Obtener valor del potenciómetro (corregido: pots invertidos en v2.0)
   int potPin = getPotForStep(currentStep);
-  int potValue = analogRead(potPin);
+  int potValue = 4095 - analogRead(potPin);
   
   // Umbral de silencio ajustado
   if (potValue <= 150) { // Aumentado de 50 a 150
@@ -376,9 +400,10 @@ void playNoteFromCurrentStep() {
   int note = octaveBases[currentOctave] + scales[currentScale][index];
   note = constrain(note, 0, 127); // Asegurar rango MIDI válido
   
-  // Enviar nota
+  // Enviar nota y registrar tiempo para el blackout del CC
   sendMidiNoteOn(note, 127, 1);
   lastNotePlayed = note;
+  lastNoteTime = millis();
 }
 
 int getPotForStep(int step) {
