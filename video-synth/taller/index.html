@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proto-Synth + Video-Synth · Taller GC Lab Chile</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a;
+  --bg2: #0f0f0f;
+  --bg3: #141414;
+  --green: #00ff88;
+  --green-dim: #007a42;
+  --orange: #f7941d;
+  --orange-dim: #7a4a0e;
+  --white: #e8e8d8;
+  --gray: #444;
+  --gray-dim: #222;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --nav-h: 56px;
+}
+html { scroll-behavior: smooth; }
+body {
+  background-color: var(--bg);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  background-image:
+    linear-gradient(rgba(0,255,136,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,136,.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+/* Scanlines overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.12) 3px, rgba(0,0,0,.12) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 3px; }
+
+/* ── Boot Screen ───────────────────────────────────────────────────────────── */
+#boot {
+  position: fixed; inset: 0; z-index: 10000;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  transition: opacity .6s ease;
+}
+#boot.hide { opacity: 0; pointer-events: none; }
+#boot-text { color: var(--green); font-size: .85rem; line-height: 2; max-width: 420px; }
+#boot-text .line { display: block; overflow: hidden; height: 0; transition: height .15s; }
+#boot-text .line.show { height: 1.5rem; }
+#boot-cursor { display: inline-block; width: 8px; height: 1rem; background: var(--green); animation: blink .7s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── Navigation ────────────────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h);
+  background: rgba(10,10,10,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,255,136,.15);
+  display: flex; align-items: center;
+  padding: 0 2rem;
+  z-index: 1000;
+  gap: 2rem;
+}
+.nav-logo {
+  font-family: var(--font-mono); font-size: .8rem; font-weight: 600;
+  color: var(--green); letter-spacing: .1em; white-space: nowrap;
+  text-decoration: none;
+}
+.nav-logo span { color: var(--orange); }
+.nav-links { display: flex; gap: 0; list-style: none; margin-left: auto; }
+.nav-links a {
+  display: block; padding: .4rem .9rem;
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .05em;
+  color: var(--gray); text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+  white-space: nowrap;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--green); border-bottom-color: var(--green); }
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+}
+
+/* ── Section base ──────────────────────────────────────────────────────────── */
+.section {
+  min-height: 100vh;
+  padding: calc(var(--nav-h) + 4rem) 3rem 4rem;
+  max-width: 1100px; margin: 0 auto;
+}
+.section-full { max-width: none; padding-left: 0; padding-right: 0; }
+.section-label {
+  font-family: var(--font-mono); font-size: .7rem; letter-spacing: .2em;
+  color: var(--green); text-transform: uppercase; margin-bottom: .5rem;
+  opacity: .7;
+}
+.section-title {
+  font-family: var(--font-mono); font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 600; color: var(--white); margin-bottom: .5rem;
+  text-shadow: 0 0 30px rgba(0,255,136,.25);
+}
+.section-title span { color: var(--green); }
+.section-sub {
+  color: var(--gray); font-size: .95rem; max-width: 600px; margin-bottom: 3rem;
+}
+.divider {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, var(--green), transparent);
+  margin: 1rem 0 2.5rem;
+}
+
+/* ── Cards & UI ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid rgba(0,255,136,.12);
+  border-radius: 6px; padding: 1.5rem;
+  transition: border-color .3s;
+}
+.card:hover { border-color: rgba(0,255,136,.35); }
+.tag {
+  display: inline-block; font-family: var(--font-mono); font-size: .65rem;
+  letter-spacing: .1em; padding: .2rem .6rem;
+  border: 1px solid var(--green); color: var(--green);
+  border-radius: 2px; text-transform: uppercase;
+}
+.tag-orange { border-color: var(--orange); color: var(--orange); }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .6rem 1.4rem; font-family: var(--font-mono); font-size: .8rem;
+  letter-spacing: .08em; text-transform: uppercase;
+  background: transparent; border: 1px solid var(--green); color: var(--green);
+  border-radius: 3px; cursor: pointer;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+.btn:hover { background: rgba(0,255,136,.1); box-shadow: 0 0 16px rgba(0,255,136,.2); }
+.btn-orange { border-color: var(--orange); color: var(--orange); }
+.btn-orange:hover { background: rgba(247,148,29,.1); box-shadow: 0 0 16px rgba(247,148,29,.2); }
+.glow { text-shadow: 0 0 20px var(--green); }
+code {
+  font-family: var(--font-mono); font-size: .82em;
+  background: var(--bg3); color: var(--green);
+  padding: .1em .4em; border-radius: 3px;
+}
+
+/* ── S1 Skill Map ──────────────────────────────────────────────────────────── */
+#skill-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+@media (max-width: 800px) { #skill-layout { grid-template-columns: 1fr; } }
+@keyframes pulse-ring {
+  0%, 100% { opacity: .25; }
+  50%       { opacity: .55; }
+}
+.skill-map-wrap { position: relative; }
+#skill-map { width: 100%; max-width: 520px; height: auto; cursor: pointer; }
+.skill-node { cursor: pointer; }
+.skill-node circle { transition: all .3s; }
+.skill-node:hover circle.main-circle { filter: brightness(1.4); }
+.skill-node.known circle.main-circle { fill: rgba(0,255,136,.12) !important; }
+.skill-node.taller circle.main-circle { stroke: var(--green) !important; stroke-width: 2.5 !important; }
+.skill-tooltip {
+  position: absolute; background: rgba(10,10,10,.95);
+  border: 1px solid rgba(0,255,136,.35); border-radius: 6px;
+  padding: 1rem 1.2rem; min-width: 180px;
+  font-family: var(--font-mono); font-size: .72rem;
+  pointer-events: none; z-index: 100;
+  opacity: 0; transition: opacity .2s;
+  backdrop-filter: blur(8px);
+}
+.skill-tooltip.visible { opacity: 1; }
+.skill-tooltip h4 { color: var(--green); margin-bottom: .5rem; font-size: .78rem; }
+.skill-tooltip ul { list-style: none; }
+.skill-tooltip li { color: var(--gray); padding: .15rem 0; }
+.skill-tooltip li.covered { color: var(--white); }
+.skill-tooltip li.covered::before { content: '▶ '; color: var(--green); }
+.skill-map-right { }
+.skill-question { font-family: var(--font-mono); font-size: 1.1rem; color: var(--white); margin-bottom: 1rem; }
+.skill-question span { color: var(--green); }
+.skill-legend { margin-top: 1.5rem; font-family: var(--font-mono); font-size: .72rem; }
+.skill-legend div { display: flex; align-items: center; gap: .6rem; margin: .4rem 0; color: var(--gray); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.known-count { font-size: 1.8rem; font-family: var(--font-mono); color: var(--green); }
+
+/* ── S2 Proto-Synth ────────────────────────────────────────────────────────── */
+#s2-inner { display: grid; grid-template-columns: 3fr 2fr; gap: 3rem; align-items: start; }
+@media (max-width: 800px) { #s2-inner { grid-template-columns: 1fr; } }
+.board-wrap { position: relative; }
+#board-svg { width: 100%; max-width: 480px; }
+.pin-area { cursor: pointer; }
+.pin-area:hover .pin-highlight { opacity: 1; }
+.pin-highlight { opacity: 0; transition: opacity .2s; }
+.pin-tooltip {
+  position: absolute; background: rgba(10,10,10,.96);
+  border: 1px solid rgba(247,148,29,.4); border-radius: 6px;
+  padding: .8rem 1rem; min-width: 200px; max-width: 240px;
+  font-family: var(--font-mono); font-size: .72rem;
+  pointer-events: none; z-index: 100;
+  opacity: 0; transition: opacity .2s;
+  backdrop-filter: blur(8px);
+}
+.pin-tooltip.visible { opacity: 1; }
+.pin-tooltip h4 { color: var(--orange); margin-bottom: .3rem; }
+.pin-tooltip .pin-gpio { color: var(--green); font-size: .65rem; margin-bottom: .4rem; }
+.pin-tooltip p { color: var(--gray); font-size: .7rem; line-height: 1.5; }
+.specs-list { list-style: none; }
+.specs-list li {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: .6rem 0; border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: .85rem;
+}
+.specs-list li:last-child { border-bottom: none; }
+.specs-list .spec-key { font-family: var(--font-mono); font-size: .72rem; color: var(--gray); }
+.specs-list .spec-val { font-family: var(--font-mono); font-size: .75rem; color: var(--green); text-align: right; }
+
+/* ── S3 Installation ───────────────────────────────────────────────────────── */
+.install-grid { display: grid; gap: 1rem; }
+.install-step {
+  background: var(--bg2);
+  border: 1px solid rgba(0,255,136,.1);
+  border-radius: 6px; overflow: hidden;
+  transition: border-color .3s;
+}
+.install-step.done { border-color: rgba(0,255,136,.4); }
+.install-step-header {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1rem 1.5rem; cursor: pointer;
+  user-select: none;
+}
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--green-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: .72rem; color: var(--green-dim);
+  flex-shrink: 0; transition: all .3s;
+}
+.install-step.done .step-num { background: var(--green); border-color: var(--green); color: #000; }
+.step-title { font-family: var(--font-mono); font-size: .9rem; color: var(--white); flex: 1; }
+.step-toggle { font-family: var(--font-mono); font-size: .7rem; color: var(--green); transition: transform .3s; }
+.install-step.open .step-toggle { transform: rotate(180deg); }
+.install-step-body { padding: 0 1.5rem; max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s; }
+.install-step.open .install-step-body { max-height: 400px; padding: 0 1.5rem 1.5rem; }
+.install-step-body p { color: #888; font-size: .85rem; margin-bottom: .8rem; }
+.install-step-body a { color: var(--green); }
+.cmd-block {
+  background: #000; border: 1px solid rgba(0,255,136,.2);
+  border-radius: 4px; padding: .8rem 1rem;
+  font-family: var(--font-mono); font-size: .8rem;
+  color: var(--green); margin: .5rem 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.cmd-block code { background: none; padding: 0; font-size: .8rem; }
+.copy-btn {
+  background: none; border: 1px solid var(--green-dim); color: var(--green-dim);
+  border-radius: 3px; padding: .2rem .5rem;
+  font-family: var(--font-mono); font-size: .65rem;
+  cursor: pointer; transition: all .2s; white-space: nowrap; flex-shrink: 0;
+}
+.copy-btn:hover { background: rgba(0,255,136,.1); color: var(--green); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+.step-mark {
+  margin-top: .8rem; display: flex; align-items: center; gap: .6rem;
+  font-family: var(--font-mono); font-size: .72rem; color: var(--gray);
+  cursor: pointer; user-select: none;
+}
+.step-mark input[type="checkbox"] { accent-color: var(--green); width: 14px; height: 14px; cursor: pointer; }
+
+/* ── S4 Connection ─────────────────────────────────────────────────────────── */
+.flow-diagram { margin: 2rem 0; }
+.flow-row {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;
+}
+.flow-node {
+  background: var(--bg2); border: 1px solid rgba(0,255,136,.25);
+  border-radius: 6px; padding: .7rem 1.2rem;
+  font-family: var(--font-mono); font-size: .78rem; color: var(--white);
+  text-align: center; min-width: 120px;
+  animation: pulse-border 3s ease-in-out infinite;
+}
+.flow-node.highlight { border-color: var(--green); color: var(--green); }
+.flow-node.highlight2 { border-color: var(--orange); color: var(--orange); }
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,.2); }
+  50% { box-shadow: 0 0 0 6px rgba(0,255,136,.0); }
+}
+.flow-arrow {
+  font-family: var(--font-mono); font-size: .72rem; color: var(--green-dim);
+  text-align: center; padding: 0 .5rem; flex-shrink: 0;
+}
+.flow-label {
+  font-family: var(--font-mono); font-size: .65rem; color: var(--gray);
+  text-align: center; display: block; margin-top: .25rem;
+}
+.trouble-list { margin-top: 1.5rem; }
+.trouble-item {
+  border: 1px solid rgba(255,255,255,.06); border-radius: 6px; margin-bottom: .8rem; overflow: hidden;
+}
+.trouble-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .8rem 1.2rem; cursor: pointer;
+  font-family: var(--font-mono); font-size: .8rem; color: #888;
+}
+.trouble-header:hover { color: var(--orange); }
+.trouble-header::before { content: '⚠ '; color: var(--orange); }
+.trouble-body { padding: 0 1.2rem; max-height: 0; overflow: hidden; transition: max-height .3s, padding .3s; }
+.trouble-item.open .trouble-body { max-height: 200px; padding: 0 1.2rem .8rem; }
+.trouble-body p { font-size: .82rem; color: #666; line-height: 1.6; }
+.trouble-body code { font-size: .78rem; }
+
+/* ── S5 Video Synth Demo ───────────────────────────────────────────────────── */
+#s5 { padding: 0; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
+.synth-header {
+  padding: calc(var(--nav-h) + 2rem) 3rem 1.5rem;
+  max-width: 1100px; margin: 0 auto; width: 100%;
+}
+.synth-stage { flex: 1; position: relative; }
+#synth-canvas {
+  display: block; width: 100%; height: 60vh;
+  background: #000; cursor: crosshair;
+}
+.synth-controls {
+  background: rgba(10,10,10,.9);
+  border-top: 1px solid rgba(0,255,136,.15);
+  padding: 1.2rem 2rem;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.2rem; align-items: start;
+}
+.ctrl-group label {
+  display: block; font-family: var(--font-mono); font-size: .65rem;
+  letter-spacing: .1em; color: var(--green); margin-bottom: .4rem;
+  text-transform: uppercase;
+}
+.ctrl-group .ctrl-val {
+  font-family: var(--font-mono); font-size: .7rem; color: var(--orange);
+  float: right;
+}
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 3px;
+  background: rgba(0,255,136,.2); border-radius: 2px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--green);
+  border: 2px solid var(--bg); cursor: pointer;
+  box-shadow: 0 0 8px rgba(0,255,136,.6);
+}
+.mode-btns { display: flex; flex-wrap: wrap; gap: .4rem; }
+.mode-btn {
+  font-family: var(--font-mono); font-size: .65rem; letter-spacing: .05em;
+  padding: .3rem .6rem; background: none;
+  border: 1px solid var(--gray-dim); color: var(--gray);
+  border-radius: 3px; cursor: pointer; transition: all .2s;
+}
+.mode-btn:hover { border-color: var(--green-dim); color: var(--green); }
+.mode-btn.active { border-color: var(--green); color: var(--green); background: rgba(0,255,136,.08); }
+.palette-btns { display: flex; gap: .4rem; }
+.pal-btn {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; transition: transform .2s;
+}
+.pal-btn:hover, .pal-btn.active { transform: scale(1.25); border-color: var(--white); }
+.synth-actions {
+  display: flex; gap: .6rem; flex-wrap: wrap; align-items: center;
+}
+.audio-status {
+  font-family: var(--font-mono); font-size: .65rem; color: var(--gray);
+  align-self: center;
+}
+.audio-status.on { color: var(--green); }
+.fps-counter {
+  margin-left: auto; font-family: var(--font-mono); font-size: .65rem; color: rgba(0,255,136,.3);
+}
+
+/* ── S6 Resources ──────────────────────────────────────────────────────────── */
+.resources-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+.resource-card {
+  background: var(--bg2); border: 1px solid rgba(0,255,136,.1);
+  border-radius: 6px; padding: 1.5rem;
+  transition: border-color .3s, transform .3s;
+  text-decoration: none; display: block; color: inherit;
+}
+.resource-card:hover { border-color: rgba(0,255,136,.4); transform: translateY(-2px); }
+.resource-card h3 { font-family: var(--font-mono); font-size: .9rem; color: var(--white); margin-bottom: .4rem; }
+.resource-card p { font-size: .82rem; color: var(--gray); line-height: 1.5; }
+.resource-card .rc-tag { margin-top: .8rem; }
+.skills-recap { background: var(--bg2); border: 1px solid rgba(0,255,136,.2); border-radius: 6px; padding: 2rem; }
+.skills-recap h3 { font-family: var(--font-mono); font-size: 1rem; color: var(--green); margin-bottom: 1.5rem; }
+.skills-recap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.skill-recap-item { background: rgba(0,255,136,.05); border: 1px solid rgba(0,255,136,.15); border-radius: 6px; padding: 1rem; }
+.skill-recap-item h4 { font-family: var(--font-mono); font-size: .75rem; color: var(--green); margin-bottom: .5rem; }
+.skill-recap-item ul { list-style: none; }
+.skill-recap-item li { font-size: .75rem; color: var(--gray); padding: .1rem 0; }
+.skill-recap-item li::before { content: '› '; color: var(--green-dim); }
+
+/* ── Misc animations ───────────────────────────────────────────────────────── */
+.fade-in { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
+.fade-in.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<!-- ── Boot Screen ──────────────────────────────────────────────────────────── -->
+<div id="boot">
+  <div id="boot-text">
+    <span class="line" id="bl0">GC LAB CHILE — PROTO-SYNTH V2 TALLER</span>
+    <span class="line" id="bl1">FIRMWARE VERSION: 2.0.0</span>
+    <span class="line" id="bl2">INITIALIZING AUDIO ENGINE... <span style="color:#f7941d">OK</span></span>
+    <span class="line" id="bl3">INITIALIZING VIDEO ENGINE... <span style="color:#f7941d">OK</span></span>
+    <span class="line" id="bl4">LOADING SKILL MAP... <span style="color:#f7941d">OK</span></span>
+    <span class="line" id="bl5">MOUNTING INTERFACE... <span style="color:#f7941d">OK</span></span>
+    <span class="line" id="bl6" style="margin-top:.5rem">SISTEMA LISTO. <span id="boot-cursor"></span></span>
+  </div>
+</div>
+
+<!-- ── Navigation ───────────────────────────────────────────────────────────── -->
+<nav>
+  <a href="#s1" class="nav-logo">GC LAB<span> ///</span> TALLER</a>
+  <ul class="nav-links">
+    <li><a href="#s1" data-section="s1">01 · Mapa</a></li>
+    <li><a href="#s2" data-section="s2">02 · Proto-Synth</a></li>
+    <li><a href="#s3" data-section="s3">03 · Software</a></li>
+    <li><a href="#s4" data-section="s4">04 · Conexión</a></li>
+    <li><a href="#s5" data-section="s5">05 · Demo</a></li>
+    <li><a href="#s6" data-section="s6">06 · Recursos</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- S1 · SKILL MAP                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="s1" class="section">
+  <div style="min-height:80vh" id="skill-layout">
+    <div class="skill-map-wrap fade-in">
+      <svg id="skill-map" viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow-green"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="glow-orange"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <!-- Connection lines -->
+        <g id="skill-lines" stroke="rgba(0,255,136,.12)" stroke-width="1" fill="none">
+          <line x1="280" y1="280" x2="280" y2="108"/>
+          <line x1="280" y1="280" x2="441" y2="194"/>
+          <line x1="280" y1="280" x2="384" y2="400"/>
+          <line x1="280" y1="280" x2="176" y2="400"/>
+          <line x1="280" y1="280" x2="119" y2="194"/>
+        </g>
+        <!-- Central circle -->
+        <g id="skill-central" transform="translate(280,280)">
+          <circle r="68" fill="rgba(0,255,136,.06)" stroke="rgba(0,255,136,.4)" stroke-width="1.5"/>
+          <circle r="62" fill="none" stroke="rgba(0,255,136,.15)" stroke-width="1" stroke-dasharray="4 4"/>
+          <text y="-10" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="#00ff88" font-weight="600">STEAM</text>
+          <text y="6" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(0,255,136,.6)">Colaboración</text>
+          <text y="20" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(0,255,136,.6)">Creatividad</text>
+        </g>
+        <!-- Skill nodes (generated by JS) -->
+        <g id="skill-nodes"></g>
+      </svg>
+      <div id="skill-tooltip" class="skill-tooltip"></div>
+    </div>
+
+    <div class="skill-map-right fade-in">
+      <div class="section-label">01 · Intro</div>
+      <h2 class="section-title">Skill Map<br><span>Interactivo</span></h2>
+      <div class="divider"></div>
+      <p class="skill-question">¿En qué <span>círculo</span><br>te encontrás hoy?</p>
+      <p style="color:#666;font-size:.85rem;margin-top:.8rem;line-height:1.6">
+        Hacé click en los círculos para marcar las áreas que ya conocés. Los círculos con borde verde son los que cubre este taller.
+      </p>
+      <div class="skill-legend" style="margin-top:1.5rem">
+        <div><span class="legend-dot" style="background:rgba(0,255,136,.15);border:2px solid rgba(0,255,136,.8)"></span>Cubierto en este taller</div>
+        <div><span class="legend-dot" style="background:rgba(0,255,136,.25);border:2px solid rgba(0,255,136,.5)"></span>Ya lo conozco</div>
+        <div><span class="legend-dot" style="background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.15)"></span>Por explorar</div>
+      </div>
+      <p style="margin-top:1.5rem;font-family:var(--font-mono);font-size:.75rem;color:#555">
+        Círculos marcados: <span class="known-count" id="known-count">0</span>
+      </p>
+      <button class="btn" style="margin-top:1.5rem" onclick="clearKnown()">↺ Reiniciar mapa</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- S2 · PROTO-SYNTH                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="s2" class="section" style="max-width:1100px;margin:0 auto">
+  <div class="section-label fade-in">02 · Hardware</div>
+  <h2 class="section-title fade-in">El <span>Proto-Synth</span> v2</h2>
+  <div class="divider fade-in"></div>
+  <p class="section-sub fade-in">Explorá los componentes. Hacé hover o click sobre cada parte para ver qué hace.</p>
+  <div id="s2-inner">
+    <div class="board-wrap fade-in">
+      <svg id="board-svg" viewBox="0 0 480 560" xmlns="http://www.w3.org/2000/svg" style="max-width:480px;width:100%">
+        <defs>
+          <pattern id="pcb-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+            <circle cx="8" cy="8" r=".8" fill="rgba(0,255,136,.18)"/>
+          </pattern>
+          <filter id="comp-glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <!-- PCB base -->
+        <rect x="20" y="20" width="440" height="520" rx="10" fill="#0d1a0d" stroke="rgba(0,255,136,.3)" stroke-width="1.5"/>
+        <rect x="20" y="20" width="440" height="520" rx="10" fill="url(#pcb-grid)"/>
+        <!-- PCB traces -->
+        <g stroke="rgba(0,255,136,.12)" stroke-width="1" fill="none">
+          <line x1="80" y1="100" x2="400" y2="100"/>
+          <line x1="240" y1="100" x2="240" y2="200"/>
+          <line x1="80" y1="400" x2="400" y2="400"/>
+          <line x1="80" y1="460" x2="400" y2="460"/>
+          <line x1="80" y1="100" x2="80" y2="460"/>
+          <line x1="400" y1="100" x2="400" y2="460"/>
+        </g>
+        <!-- Mounting holes -->
+        <g fill="none" stroke="rgba(0,255,136,.3)" stroke-width="1">
+          <circle cx="45" cy="45" r="5"/>
+          <circle cx="435" cy="45" r="5"/>
+          <circle cx="45" cy="515" r="5"/>
+          <circle cx="435" cy="515" r="5"/>
+        </g>
+        <!-- Components (each is a <g class="pin-area" data-*) -->
+        <!-- ESP32 chip -->
+        <g class="pin-area" data-comp="esp32" data-name="ESP32 DevKit v1" data-gpio="240 MHz Dual Core" data-desc="El cerebro de todo. Microcontrolador ESP32 con WiFi y Bluetooth. Corre el firmware que genera el audio y procesa los sensores a 240 MHz.">
+          <rect x="160" y="140" width="160" height="110" rx="6" fill="#1a2a1a" stroke="rgba(0,255,136,.5)" stroke-width="1.5"/>
+          <rect x="160" y="140" width="160" height="110" rx="6" class="pin-highlight" fill="rgba(0,255,136,.08)"/>
+          <text x="240" y="188" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="#00ff88" font-weight="600">ESP32</text>
+          <text x="240" y="203" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8.5" fill="rgba(0,255,136,.5)">DevKit v1</text>
+          <text x="240" y="216" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="rgba(0,255,136,.35)">240 MHz · 520KB SRAM</text>
+          <!-- Chip legs -->
+          <g stroke="rgba(0,255,136,.3)" stroke-width="1" fill="none">
+            <line x1="168" y1="148" x2="155" y2="148"/>
+            <line x1="168" y1="160" x2="155" y2="160"/>
+            <line x1="168" y1="172" x2="155" y2="172"/>
+            <line x1="168" y1="184" x2="155" y2="184"/>
+            <line x1="168" y1="196" x2="155" y2="196"/>
+            <line x1="168" y1="208" x2="155" y2="208"/>
+            <line x1="312" y1="148" x2="325" y2="148"/>
+            <line x1="312" y1="160" x2="325" y2="160"/>
+            <line x1="312" y1="172" x2="325" y2="172"/>
+            <line x1="312" y1="184" x2="325" y2="184"/>
+            <line x1="312" y1="196" x2="325" y2="196"/>
+            <line x1="312" y1="208" x2="325" y2="208"/>
+          </g>
+        </g>
+
+        <!-- Audio Jack -->
+        <g class="pin-area" data-comp="audio" data-name="Salida de Audio" data-gpio="GPIO 25 (DAC 8-bit)" data-desc="Jack 3.5mm mono. El DAC de hardware del ESP32 produce la señal de audio. Conectá tus auriculares o un amplificador. Voltaje de salida: ~0–3.3V.">
+          <rect x="30" y="200" width="50" height="50" rx="4" fill="#1a1a2a" stroke="rgba(0,100,255,.5)" stroke-width="1.5"/>
+          <rect x="30" y="200" width="50" height="50" rx="4" class="pin-highlight" fill="rgba(80,80,255,.08)"/>
+          <circle cx="55" cy="225" r="14" fill="none" stroke="rgba(80,120,255,.6)" stroke-width="1.5"/>
+          <circle cx="55" cy="225" r="5" fill="#1a1a2a" stroke="rgba(80,120,255,.4)"/>
+          <text x="55" y="264" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(80,120,255,.7)">AUDIO</text>
+          <text x="55" y="274" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(80,120,255,.5)">3.5mm</text>
+        </g>
+
+        <!-- MIDI -->
+        <g class="pin-area" data-comp="midi" data-name="Salida MIDI" data-gpio="TX0 (31250 baud)" data-desc="Conector MIDI DIN-5 estándar. Enviá mensajes MIDI a sintetizadores, DAWs y cualquier instrumento con entrada MIDI. Velocidad: 31250 baudios.">
+          <rect x="390" y="200" width="60" height="50" rx="4" fill="#2a1a0a" stroke="rgba(247,148,29,.4)" stroke-width="1.5"/>
+          <rect x="390" y="200" width="60" height="50" rx="4" class="pin-highlight" fill="rgba(247,148,29,.06)"/>
+          <circle cx="420" cy="222" r="12" fill="none" stroke="rgba(247,148,29,.5)" stroke-width="1.5"/>
+          <g fill="rgba(247,148,29,.5)" font-family="IBM Plex Mono,monospace" font-size="6">
+            <circle cx="414" cy="216" r="1.5"/><circle cx="426" cy="216" r="1.5"/>
+            <circle cx="411" cy="224" r="1.5"/><circle cx="420" cy="224" r="1.5"/><circle cx="429" cy="224" r="1.5"/>
+          </g>
+          <text x="420" y="264" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(247,148,29,.7)">MIDI</text>
+          <text x="420" y="274" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(247,148,29,.5)">DIN-5</text>
+        </g>
+
+        <!-- IMU MPU6050 -->
+        <g class="pin-area" data-comp="imu" data-name="IMU MPU6050" data-gpio="I2C: SDA=21, SCL=22" data-desc="Acelerómetro + giroscopio de 6 ejes. Detecta la inclinación y movimiento de la placa. Usalo para controlar parámetros con gestos en el aire.">
+          <rect x="355" y="90" width="70" height="50" rx="4" fill="#1a0a2a" stroke="rgba(150,80,255,.5)" stroke-width="1.5"/>
+          <rect x="355" y="90" width="70" height="50" rx="4" class="pin-highlight" fill="rgba(150,80,255,.08)"/>
+          <text x="390" y="113" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(150,80,255,.9)" font-weight="600">MPU6050</text>
+          <text x="390" y="127" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="rgba(150,80,255,.5)">IMU 6-axis</text>
+        </g>
+
+        <!-- Potentiometers row -->
+        <g class="pin-area" data-comp="pots" data-name="4 Potenciómetros" data-gpio="GPIO 13,14,12,27 (ADC2)" data-desc="4 perillas analógicas de 12-bit (0–4095). Controlá frecuencia, volumen, filtros y efectos. Nota: invertidos en v2.0, el firmware los corrige automáticamente.">
+          <g>
+            <circle cx="105" cy="450" r="24" fill="#1a1a1a" stroke="rgba(0,255,136,.4)" stroke-width="1.5"/>
+            <circle cx="105" cy="450" r="18" fill="none" stroke="rgba(0,255,136,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="105" cy="450" r="3" fill="rgba(0,255,136,.6)"/>
+            <line x1="105" y1="432" x2="105" y2="440" stroke="rgba(0,255,136,.8)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="175" cy="450" r="24" fill="#1a1a1a" stroke="rgba(0,255,136,.4)" stroke-width="1.5"/>
+            <circle cx="175" cy="450" r="18" fill="none" stroke="rgba(0,255,136,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="175" cy="450" r="3" fill="rgba(0,255,136,.6)"/>
+            <line x1="183" y1="444" x2="177" y2="449" stroke="rgba(0,255,136,.8)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="245" cy="450" r="24" fill="#1a1a1a" stroke="rgba(0,255,136,.4)" stroke-width="1.5"/>
+            <circle cx="245" cy="450" r="18" fill="none" stroke="rgba(0,255,136,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="245" cy="450" r="3" fill="rgba(0,255,136,.6)"/>
+            <line x1="245" y1="432" x2="245" y2="440" stroke="rgba(0,255,136,.8)" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="315" cy="450" r="24" fill="#1a1a1a" stroke="rgba(0,255,136,.4)" stroke-width="1.5"/>
+            <circle cx="315" cy="450" r="18" fill="none" stroke="rgba(0,255,136,.15)" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="315" cy="450" r="3" fill="rgba(0,255,136,.6)"/>
+            <line x1="308" y1="444" x2="313" y2="449" stroke="rgba(0,255,136,.8)" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <!-- Highlight overlay for group -->
+          <rect x="75" y="420" width="272" height="60" rx="4" class="pin-highlight" fill="rgba(0,255,136,.05)"/>
+          <text x="175" y="500" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="rgba(0,255,136,.5)">POT1 · POT2 · POT3 · POT4</text>
+        </g>
+
+        <!-- Buttons row -->
+        <g class="pin-area" data-comp="btns" data-name="4 Botones" data-gpio="GPIO 18,4,15,19 (pull-up)" data-desc="4 pulsadores táctiles con resistencias pull-up internas. Lógica invertida: suelto=HIGH, presionado=LOW. Usalos para trigger, cambio de modo, play/pause y más.">
+          <g>
+            <rect x="92" y="340" width="28" height="28" rx="4" fill="#2a1a0a" stroke="rgba(247,148,29,.5)" stroke-width="1.5"/>
+            <rect x="162" y="340" width="28" height="28" rx="4" fill="#2a1a0a" stroke="rgba(247,148,29,.5)" stroke-width="1.5"/>
+            <rect x="232" y="340" width="28" height="28" rx="4" fill="#2a1a0a" stroke="rgba(247,148,29,.5)" stroke-width="1.5"/>
+            <rect x="302" y="340" width="28" height="28" rx="4" fill="#2a1a0a" stroke="rgba(247,148,29,.5)" stroke-width="1.5"/>
+            <text x="106" y="359" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(247,148,29,.7)" font-weight="600">1</text>
+            <text x="176" y="359" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(247,148,29,.7)" font-weight="600">2</text>
+            <text x="246" y="359" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(247,148,29,.7)" font-weight="600">3</text>
+            <text x="316" y="359" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(247,148,29,.7)" font-weight="600">4</text>
+          </g>
+          <rect x="82" y="330" width="278" height="50" rx="4" class="pin-highlight" fill="rgba(247,148,29,.05)"/>
+          <text x="175" y="320" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="rgba(247,148,29,.5)">BTN1 · BTN2 · BTN3 · BTN4</text>
+        </g>
+
+        <!-- LEDs -->
+        <g class="pin-area" data-comp="leds" data-name="4 LEDs indicadores" data-gpio="GPIO 23,32,5,2" data-desc="4 LEDs RGB de estado. Indican el paso activo del secuenciador, modo de reproducción, estado de conexión y actividad de sensores. El LED4 (GPIO 2) es el LED de bordo del ESP32.">
+          <g>
+            <circle cx="106" cy="290" r="9" fill="#1a0a0a" stroke="rgba(255,80,80,.6)" stroke-width="1.5"/>
+            <circle cx="176" cy="290" r="9" fill="#0a1a0a" stroke="rgba(80,255,80,.6)" stroke-width="1.5"/>
+            <circle cx="246" cy="290" r="9" fill="#0a0a1a" stroke="rgba(80,80,255,.6)" stroke-width="1.5"/>
+            <circle cx="316" cy="290" r="9" fill="#1a1a0a" stroke="rgba(255,220,80,.6)" stroke-width="1.5"/>
+            <circle cx="106" cy="290" r="4" fill="rgba(255,80,80,.3)"/>
+            <circle cx="176" cy="290" r="4" fill="rgba(80,255,80,.3)"/>
+            <circle cx="246" cy="290" r="4" fill="rgba(80,80,255,.3)"/>
+            <circle cx="316" cy="290" r="4" fill="rgba(255,220,80,.3)"/>
+          </g>
+          <rect x="88" y="275" width="254" height="30" rx="4" class="pin-highlight" fill="rgba(255,255,255,.03)"/>
+          <text x="183" y="268" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="rgba(255,255,255,.3)">LED1 · LED2 · LED3 · LED4</text>
+        </g>
+
+        <!-- LDR -->
+        <g class="pin-area" data-comp="ldr" data-name="Sensor de Luz LDR" data-gpio="GPIO 26" data-desc="Fotoresistor (Light Dependent Resistor). La resistencia cambia según la intensidad lumínica. Cubrilo o apuntale una linterna para controlar parámetros con luz.">
+          <rect x="55" y="82" width="44" height="44" rx="4" fill="#0a1a2a" stroke="rgba(255,220,80,.4)" stroke-width="1.5"/>
+          <rect x="55" y="82" width="44" height="44" rx="4" class="pin-highlight" fill="rgba(255,220,80,.06)"/>
+          <text x="77" y="97" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(255,220,80,.8)">LDR</text>
+          <path d="M65,110 Q77,98 89,110" stroke="rgba(255,220,80,.6)" stroke-width="1.5" fill="none"/>
+          <line x1="60" y1="107" x2="62" y2="113" stroke="rgba(255,220,80,.5)" stroke-width="1"/>
+          <line x1="69" y1="112" x2="71" y2="118" stroke="rgba(255,220,80,.5)" stroke-width="1"/>
+          <line x1="79" y1="114" x2="81" y2="120" stroke="rgba(255,220,80,.5)" stroke-width="1"/>
+          <text x="77" y="118" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="rgba(255,220,80,.4)">LIGHT</text>
+        </g>
+
+        <!-- Microphone -->
+        <g class="pin-area" data-comp="mic" data-name="Micrófono" data-gpio="GPIO 33" data-desc="Micrófono electret para captura de audio. Usalo para samplear sonidos en los firmwares de grabación, o como trigger reactivo al sonido del ambiente.">
+          <rect x="55" y="150" width="44" height="40" rx="4" fill="#1a0a1a" stroke="rgba(200,80,255,.4)" stroke-width="1.5"/>
+          <rect x="55" y="150" width="44" height="40" rx="4" class="pin-highlight" fill="rgba(200,80,255,.06)"/>
+          <text x="77" y="167" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(200,80,255,.8)">MIC</text>
+          <circle cx="77" cy="178" r="7" fill="none" stroke="rgba(200,80,255,.5)" stroke-width="1.5"/>
+          <circle cx="77" cy="178" r="2.5" fill="rgba(200,80,255,.4)"/>
+        </g>
+
+        <!-- Board label -->
+        <text x="240" y="550" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="rgba(0,255,136,.3)" letter-spacing="3">PROTO-SYNTH V2 · GC LAB CHILE</text>
+      </svg>
+      <div id="pin-tooltip" class="pin-tooltip"></div>
+    </div>
+
+    <div class="fade-in">
+      <ul class="specs-list card" style="margin-bottom:1.5rem">
+        <li><span class="spec-key">MCU</span><span class="spec-val">ESP32 DevKit v1</span></li>
+        <li><span class="spec-key">Clock</span><span class="spec-val">240 MHz dual-core</span></li>
+        <li><span class="spec-key">Audio DAC</span><span class="spec-val">GPIO 25 · 8-bit · 22kHz</span></li>
+        <li><span class="spec-key">ADC</span><span class="spec-val">12-bit · 4 canales</span></li>
+        <li><span class="spec-key">Potenciómetros</span><span class="spec-val">4 × (ADC2)</span></li>
+        <li><span class="spec-key">Botones</span><span class="spec-val">4 × pull-up</span></li>
+        <li><span class="spec-key">LEDs</span><span class="spec-val">4 × indicadores</span></li>
+        <li><span class="spec-key">IMU</span><span class="spec-val">MPU6050 (I2C)</span></li>
+        <li><span class="spec-key">LDR</span><span class="spec-val">GPIO 26</span></li>
+        <li><span class="spec-key">Micrófono</span><span class="spec-val">GPIO 33</span></li>
+        <li><span class="spec-key">MIDI</span><span class="spec-val">TX0 · 31250 baud</span></li>
+        <li><span class="spec-key">Librería audio</span><span class="spec-val">Mozzi / DAC nativo</span></li>
+      </ul>
+      <div class="card">
+        <p style="font-family:var(--font-mono);font-size:.75rem;color:var(--green);margin-bottom:.5rem">⚠ ERRATA v2.0</p>
+        <p style="font-size:.8rem;color:#666;line-height:1.6">Los potenciómetros están invertidos en el hardware v2.0. El firmware lo corrige automáticamente con <code>4095 - analogRead(PIN)</code>.</p>
+        <p style="font-size:.8rem;color:#666;line-height:1.6;margin-top:.6rem">Antes de subir código, el <strong style="color:#888">POT3 debe estar al máximo</strong> (pin de strapping del ESP32).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- S3 · SOFTWARE                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="s3" class="section" style="max-width:900px;margin:0 auto">
+  <div class="section-label fade-in">03 · Setup</div>
+  <h2 class="section-title fade-in">Instalación de <span>Software</span></h2>
+  <div class="divider fade-in"></div>
+  <p class="section-sub fade-in">Seguí los pasos en orden. Tildá cada uno cuando lo terminés.</p>
+
+  <div class="install-grid fade-in">
+
+    <div class="install-step" data-step="0">
+      <div class="install-step-header" onclick="toggleStep(this)">
+        <div class="step-num">1</div>
+        <span class="step-title">Descargar Arduino IDE 2.x</span>
+        <span class="step-toggle">▼</span>
+      </div>
+      <div class="install-step-body">
+        <p>Descargá la versión 2.x desde el sitio oficial. Compatible con Windows, Mac y Linux.</p>
+        <div class="cmd-block"><code>https://www.arduino.cc/en/software</code><button class="copy-btn" onclick="copyCmd(this,'https://www.arduino.cc/en/software')">copiar</button></div>
+        <label class="step-mark"><input type="checkbox" onchange="markStep(this,0)"> Marcar como completado</label>
+      </div>
+    </div>
+
+    <div class="install-step" data-step="1">
+      <div class="install-step-header" onclick="toggleStep(this)">
+        <div class="step-num">2</div>
+        <span class="step-title">Agregar soporte ESP32 al Board Manager</span>
+        <span class="step-toggle">▼</span>
+      </div>
+      <div class="install-step-body">
+        <p>En Arduino IDE: <strong style="color:#aaa">File → Preferences</strong>, y en "Additional boards manager URLs" pegá esta URL:</p>
+        <div class="cmd-block"><code>https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json</code><button class="copy-btn" onclick="copyCmd(this,'https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json')">copiar</button></div>
+        <p>Luego: <strong style="color:#aaa">Tools → Board → Boards Manager</strong>, buscá "esp32" e instalá la versión más reciente.</p>
+        <p>Seleccioná la placa: <code>ESP32 Dev Module</code></p>
+        <label class="step-mark"><input type="checkbox" onchange="markStep(this,1)"> Marcar como completado</label>
+      </div>
+    </div>
+
+    <div class="install-step" data-step="2">
+      <div class="install-step-header" onclick="toggleStep(this)">
+        <div class="step-num">3</div>
+        <span class="step-title">Instalar librería Mozzi (síntesis avanzada)</span>
+        <span class="step-toggle">▼</span>
+      </div>
+      <div class="install-step-body">
+        <p>Mozzi permite síntesis de audio compleja con osciladores, filtros y efectos. Desde el Library Manager: buscar "Mozzi".</p>
+        <div class="cmd-block"><code>Tools → Manage Libraries → buscar "Mozzi"</code><button class="copy-btn" onclick="copyCmd(this,'Tools → Manage Libraries → buscar Mozzi')">copiar</button></div>
+        <p style="color:#555;font-size:.78rem">Versión recomendada: 1.x (compatible con ESP32 core v3.x)</p>
+        <label class="step-mark"><input type="checkbox" onchange="markStep(this,2)"> Marcar como completado</label>
+      </div>
+    </div>
+
+    <div class="install-step" data-step="3">
+      <div class="install-step-header" onclick="toggleStep(this)">
+        <div class="step-num">4</div>
+        <span class="step-title">Instalar librería MPU6050 (IMU)</span>
+        <span class="step-toggle">▼</span>
+      </div>
+      <div class="install-step-body">
+        <p>Para el acelerómetro/giroscopio MPU6050. Instalá las dos librerías de Adafruit:</p>
+        <div class="cmd-block"><code>Adafruit MPU6050</code><button class="copy-btn" onclick="copyCmd(this,'Adafruit MPU6050')">copiar</button></div>
+        <div class="cmd-block"><code>Adafruit Unified Sensor</code><button class="copy-btn" onclick="copyCmd(this,'Adafruit Unified Sensor')">copiar</button></div>
+        <p style="color:#555;font-size:.78rem">Instalá también las dependencias que te pida Arduino IDE.</p>
+        <label class="step-mark"><input type="checkbox" onchange="markStep(this,3)"> Marcar como completado</label>
+      </div>
+    </div>
+
+    <div class="install-step" data-step="4">
+      <div class="install-step-header" onclick="toggleStep(this)">
+        <div class="step-num">5</div>
+        <span class="step-title">Clonar el repositorio del Proto-Synth</span>
+        <span class="step-toggle">▼</span>
+      </div>
+      <div class="install-step-body">
+        <p>Descargá todos los firmwares de ejemplo desde GitHub:</p>
+        <div class="cmd-block"><code>git clone https://github.com/GC-Lab-Gonzalo/proto-synth-v2</code><button class="copy-btn" onclick="copyCmd(this,'git clone https://github.com/GC-Lab-Gonzalo/proto-synth-v2')">copiar</button></div>
+        <p>O descargá el ZIP desde GitHub: Code → Download ZIP.</p>
+        <label class="step-mark"><input type="checkbox" onchange="markStep(this,4)"> Marcar como completado</label>
+      </div>
+    </div>
+
+    <div class="install-step" data-step="5">
+      <div class="install-step-header" onclick="toggleStep(this)">
+        <div class="step-num">6</div>
+        <span class="step-title">Python + librerías para Video Synth (opcional)</span>
+        <span class="step-toggle">▼</span>
+      </div>
+      <div class="install-step-body">
+        <p>Solo si vas a usar el Video Synth con Python. Requiere Python 3.10+ y FFmpeg.</p>
+        <div class="cmd-block"><code>pip install opencv-python numpy pygame sounddevice soundfile pyserial imageio-ffmpeg</code><button class="copy-btn" onclick="copyCmd(this,'pip install opencv-python numpy pygame sounddevice soundfile pyserial imageio-ffmpeg')">copiar</button></div>
+        <label class="step-mark"><input type="checkbox" onchange="markStep(this,5)"> Marcar como completado</label>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:2rem;padding:1rem 1.5rem;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.15);border-radius:6px;font-family:var(--font-mono);font-size:.8rem;color:#666" class="fade-in">
+    <span style="color:var(--green)">PROGRESO: </span>
+    <span id="progress-text">0 / 6 pasos completados</span>
+    <span id="progress-bar-wrap" style="display:block;margin-top:.5rem;background:rgba(0,255,136,.1);height:3px;border-radius:2px">
+      <span id="progress-bar" style="display:block;height:3px;background:var(--green);width:0%;border-radius:2px;transition:width .4s"></span>
+    </span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- S4 · CONEXIÓN                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="s4" class="section" style="max-width:1100px;margin:0 auto">
+  <div class="section-label fade-in">04 · Deploy</div>
+  <h2 class="section-title fade-in">Carga de código y <span>Conexión</span></h2>
+  <div class="divider fade-in"></div>
+
+  <div class="fade-in">
+    <p style="font-family:var(--font-mono);font-size:.75rem;color:var(--green);margin-bottom:1rem;letter-spacing:.05em">// FLUJO: UPLOAD DE FIRMWARE</p>
+    <div class="flow-row">
+      <div class="flow-node">📁 firmware .ino<span class="flow-label">elegir</span></div>
+      <div class="flow-arrow">───▶</div>
+      <div class="flow-node highlight">POT3 al máximo<span class="flow-label">⚠ siempre primero</span></div>
+      <div class="flow-arrow">───▶</div>
+      <div class="flow-node">Cable USB<span class="flow-label">conectar</span></div>
+      <div class="flow-arrow">───▶</div>
+      <div class="flow-node">Seleccionar puerto<span class="flow-label">Tools → Port</span></div>
+      <div class="flow-arrow">───▶</div>
+      <div class="flow-node highlight">Upload ➤<span class="flow-label">esperar 10–30 seg</span></div>
+      <div class="flow-arrow">───▶</div>
+      <div class="flow-node">LEDs parpadean<span class="flow-label">✓ listo</span></div>
+    </div>
+
+    <p style="font-family:var(--font-mono);font-size:.75rem;color:var(--orange);margin-bottom:1rem;margin-top:2rem;letter-spacing:.05em">// FLUJO: VIDEO SYNTH</p>
+    <div class="flow-row">
+      <div class="flow-node" style="border-color:rgba(247,148,29,.3)">Proto-Synth<span class="flow-label">firmware control</span></div>
+      <div class="flow-arrow" style="color:var(--orange)">──USB──▶</div>
+      <div class="flow-node highlight2">PC / Laptop<span class="flow-label">Python corriendo</span></div>
+      <div class="flow-arrow" style="color:var(--orange)">──HDMI──▶</div>
+      <div class="flow-node" style="border-color:rgba(247,148,29,.3)">Proyector<span class="flow-label">o pantalla</span></div>
+    </div>
+    <div class="flow-row" style="margin-top:-.5rem">
+      <div class="flow-node" style="border-color:rgba(247,148,29,.3)">Proto-Synth<span class="flow-label">firmware MIDI</span></div>
+      <div class="flow-arrow" style="color:var(--orange)">──MIDI──▶</div>
+      <div class="flow-node" style="border-color:rgba(247,148,29,.3)">Sintetizador<span class="flow-label">o DAW</span></div>
+      <div class="flow-arrow" style="color:var(--orange)">──Audio──▶</div>
+      <div class="flow-node" style="border-color:rgba(247,148,29,.3)">Amplificador<span class="flow-label">o sistema PA</span></div>
+    </div>
+  </div>
+
+  <div class="trouble-list fade-in" style="margin-top:2.5rem">
+    <p style="font-family:var(--font-mono);font-size:.75rem;color:var(--gray);margin-bottom:1rem;letter-spacing:.05em">// TROUBLESHOOTING COMÚN</p>
+
+    <div class="trouble-item">
+      <div class="trouble-header" onclick="toggleTrouble(this)">No aparece el puerto COM en Arduino IDE</div>
+      <div class="trouble-body"><p>Instalá el driver del chip USB-serial del ESP32. Para <strong>CH340</strong>: buscar "CH340 driver". Para <strong>CP2102</strong>: buscar "CP2102 driver Silicon Labs". Desconectá y reconectá el USB después de instalar.</p></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-header" onclick="toggleTrouble(this)">Error al compilar: "too many arguments to timerBegin"</div>
+      <div class="trouble-body"><p>Estás usando el <strong>ESP32 Arduino Core v3.x</strong>. La API de timers cambió. Los firmwares del repo ya son compatibles. Si tenés código propio, usá: <code>timerBegin(freq_hz)</code> en lugar de <code>timerBegin(0, 80, true)</code>.</p></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-header" onclick="toggleTrouble(this)">El upload falla (error de comunicación)</div>
+      <div class="trouble-body"><p>Verificá que el <strong>POT3 esté al máximo</strong> (es un pin de strapping del ESP32 y debe estar HIGH durante el boot). También probá mantener presionado el botón BOOT del ESP32 mientras hacés click en Upload.</p></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-header" onclick="toggleTrouble(this)">Los potenciómetros funcionan al revés</div>
+      <div class="trouble-body"><p>Es una errata conocida del hardware v2.0. El firmware lo corrige con <code>4095 - analogRead(PIN)</code>. Si estás escribiendo código propio, recordá aplicar esta inversión.</p></div>
+    </div>
+    <div class="trouble-item">
+      <div class="trouble-header" onclick="toggleTrouble(this)">No hay sonido en la salida de audio</div>
+      <div class="trouble-body"><p>El DAC del ESP32 no puede manejar auriculares directamente — necesitás un amplificador o un adaptador activo. También verificá que el firmware esté corriendo (los LEDs deben estar activos) y que el jack esté completamente insertado.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- S5 · VIDEO SYNTH DEMO                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="s5" class="section-full" style="min-height:100vh;display:flex;flex-direction:column">
+  <div class="synth-header fade-in">
+    <div class="section-label">05 · Demo</div>
+    <h2 class="section-title">Video Synth <span>Interactivo</span></h2>
+    <p style="color:var(--gray);font-size:.9rem;margin-top:.3rem">Sintetizador visual corriendo en el navegador. Controlá los parámetros en tiempo real.</p>
+  </div>
+  <div class="synth-stage">
+    <canvas id="synth-canvas"></canvas>
+    <div class="synth-controls">
+      <!-- Mode -->
+      <div class="ctrl-group">
+        <label>Modo Visual</label>
+        <div class="mode-btns">
+          <button class="mode-btn active" onclick="setMode('lissajous',this)">ONDAS</button>
+          <button class="mode-btn" onclick="setMode('particles',this)">PARTÍCULAS</button>
+          <button class="mode-btn" onclick="setMode('geo',this)">GEO</button>
+          <button class="mode-btn" onclick="setMode('glitch',this)">GLITCH</button>
+          <button class="mode-btn" onclick="setMode('feedback',this)">FEEDBACK</button>
+        </div>
+      </div>
+      <!-- Pitch -->
+      <div class="ctrl-group">
+        <label>Pitch <span class="ctrl-val" id="pitch-val">220 Hz</span></label>
+        <input type="range" id="pitch-sl" min="50" max="880" value="220" oninput="updatePitch(this.value)">
+      </div>
+      <!-- BPM -->
+      <div class="ctrl-group">
+        <label>BPM <span class="ctrl-val" id="bpm-val">120</span></label>
+        <input type="range" id="bpm-sl" min="60" max="180" value="120" oninput="updateBPM(this.value)">
+      </div>
+      <!-- Volume -->
+      <div class="ctrl-group">
+        <label>Volumen <span class="ctrl-val" id="vol-val">40%</span></label>
+        <input type="range" id="vol-sl" min="0" max="100" value="40" oninput="updateVol(this.value)">
+      </div>
+      <!-- Palette -->
+      <div class="ctrl-group">
+        <label>Paleta</label>
+        <div class="palette-btns">
+          <div class="pal-btn active" style="background:#00ff88" onclick="setPalette(0,this)" title="Verde CRT"></div>
+          <div class="pal-btn" style="background:#f7941d" onclick="setPalette(1,this)" title="Naranja"></div>
+          <div class="pal-btn" style="background:#00ccff" onclick="setPalette(2,this)" title="Cian"></div>
+          <div class="pal-btn" style="background:#cc44ff" onclick="setPalette(3,this)" title="Violeta"></div>
+          <div class="pal-btn" style="background:#ffffff" onclick="setPalette(4,this)" title="Blanco"></div>
+        </div>
+      </div>
+      <!-- Actions -->
+      <div class="ctrl-group">
+        <label>Audio + Vista</label>
+        <div class="synth-actions">
+          <button class="btn" id="audio-btn" onclick="toggleAudio()">▶ AUDIO ON</button>
+          <button class="btn btn-orange" onclick="goFullscreen()">⛶ FULL</button>
+          <span class="audio-status" id="audio-status">sin audio</span>
+          <span class="fps-counter" id="fps-counter">— fps</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- S6 · RECURSOS                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<section id="s6" class="section" style="max-width:1100px;margin:0 auto">
+  <div class="section-label fade-in">06 · Nexos</div>
+  <h2 class="section-title fade-in">Recursos y <span>Próximos Pasos</span></h2>
+  <div class="divider fade-in"></div>
+
+  <div class="resources-grid fade-in">
+    <a class="resource-card" href="https://github.com/GC-Lab-Gonzalo/proto-synth-v2" target="_blank">
+      <h3>Repositorio GitHub</h3>
+      <p>Todos los firmwares, esquemáticos, archivos Gerber y documentación del proyecto.</p>
+      <div class="rc-tag"><span class="tag">open source</span></div>
+    </a>
+    <div class="resource-card">
+      <h3>Firmware: Lista Completa</h3>
+      <p>+20 ejemplos: osciladores, secuenciadores, control MIDI, IMU gestual, samplers y más.</p>
+      <div class="rc-tag"><span class="tag">20 firmwares</span></div>
+    </div>
+    <div class="resource-card">
+      <h3>Video Synth</h3>
+      <p>App Python para transformar cualquier video en un instrumento audiovisual en tiempo real.</p>
+      <div class="rc-tag"><span class="tag orange-tag" style="border-color:var(--orange);color:var(--orange)">Python</span></div>
+    </div>
+    <a class="resource-card" href="https://gclabchile.com" target="_blank">
+      <h3>GC Lab Chile</h3>
+      <p>Laboratorio de diseño, electrónica y arte. Próximos talleres, proyectos y comunidad.</p>
+      <div class="rc-tag"><span class="tag">comunidad</span></div>
+    </a>
+    <div class="resource-card">
+      <h3>Mozzi Library</h3>
+      <p>Librería de síntesis de audio de baja latencia para Arduino/ESP32. Osciladores, filtros, efectos.</p>
+      <div class="rc-tag"><span class="tag">DSP</span></div>
+    </div>
+    <div class="resource-card">
+      <h3>Pinout ProtoSynth v2</h3>
+      <p>Diagrama completo de pines y conexiones del hardware v2.0 con notas de errata.</p>
+      <div class="rc-tag"><span class="tag">hardware</span></div>
+    </div>
+  </div>
+
+  <div class="skills-recap card fade-in" style="margin-top:2rem">
+    <h3>¿Qué habilidades cubrió el taller?</h3>
+    <div class="skills-recap-grid">
+      <div class="skill-recap-item">
+        <h4>⚡ Electrónica</h4>
+        <ul>
+          <li>Lectura de esquemáticos</li>
+          <li>Microcontroladores ESP32</li>
+          <li>DAC y señal analógica</li>
+          <li>Protocolo MIDI</li>
+          <li>Sensores (IMU, LDR, Mic)</li>
+        </ul>
+      </div>
+      <div class="skill-recap-item">
+        <h4>💻 Programación</h4>
+        <ul>
+          <li>C++ / Arduino IDE</li>
+          <li>Python (Video Synth)</li>
+          <li>JavaScript / Web API</li>
+          <li>Comunicación serial</li>
+          <li>Algoritmos de síntesis</li>
+        </ul>
+      </div>
+      <div class="skill-recap-item">
+        <h4>🎨 Arte + Música</h4>
+        <ul>
+          <li>Síntesis de audio</li>
+          <li>Arte generativo</li>
+          <li>Video reactivo en vivo</li>
+          <li>Performance instrumental</li>
+          <li>Escalas y teoría musical</li>
+        </ul>
+      </div>
+      <div class="skill-recap-item">
+        <h4>🤖 + IA</h4>
+        <ul>
+          <li>Claude Code en acción</li>
+          <li>Desarrollo asistido</li>
+          <li>Prototipado rápido</li>
+          <li>Documentación automática</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:3rem 0;font-family:var(--font-mono);font-size:.75rem;color:#333" class="fade-in">
+    GC LAB CHILE · PROTO-SYNTH V2 · MIT LICENSE<br>
+    <span style="color:var(--green-dim)">github.com/GC-Lab-Gonzalo/proto-synth-v2</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Boot animation ─────────────────────────────────────────────────────────── */
+(function() {
+  const lines = document.querySelectorAll('#boot-text .line');
+  let i = 0;
+  function showNext() {
+    if (i < lines.length) { lines[i].classList.add('show'); i++; setTimeout(showNext, 220); }
+    else { setTimeout(() => document.getElementById('boot').classList.add('hide'), 500); }
+  }
+  setTimeout(showNext, 200);
+})();
+
+/* ── Scroll nav active ──────────────────────────────────────────────────────── */
+const sections = ['s1','s2','s3','s4','s5','s6'];
+const navLinks = document.querySelectorAll('.nav-links a');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const match = document.querySelector(`.nav-links a[data-section="${e.target.id}"]`);
+      if (match) match.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(id => { const el = document.getElementById(id); if (el) io.observe(el); });
+
+/* ── Fade-in on scroll ──────────────────────────────────────────────────────── */
+const fio = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => fio.observe(el));
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   S1 · SKILL MAP
+══════════════════════════════════════════════════════════════════════════════ */
+const SKILLS = [
+  { id:'ia',          name:'Inteligencia\nArtificial', angle:-90,   color:'#8844ff', taller:false,
+    subs:[{n:'Machine Learning',c:false},{n:'IA Generativa',c:false},{n:'Computer Vision',c:false},{n:'Prompting / Claude',c:true}] },
+  { id:'electronica', name:'Electrónica',             angle:-18,   color:'#00ff88', taller:true,
+    subs:[{n:'PCB / Circuitos',c:true},{n:'Microcontroladores',c:true},{n:'Síntesis de Audio',c:true},{n:'MIDI',c:true},{n:'Sensores',c:true}] },
+  { id:'programacion',name:'Programación',            angle:54,    color:'#00ccff', taller:true,
+    subs:[{n:'Arduino / C++',c:true},{n:'Python',c:true},{n:'JavaScript',c:true},{n:'Firmware',c:true}] },
+  { id:'robotica',    name:'Robótica',                angle:126,   color:'#ff6644', taller:false,
+    subs:[{n:'Sensores',c:true},{n:'Actuadores',c:false},{n:'Control',c:false},{n:'Automatización',c:false}] },
+  { id:'arte',        name:'Arte +\nMúsica',          angle:198,   color:'#f7941d', taller:true,
+    subs:[{n:'Música / Síntesis',c:true},{n:'Video Generativo',c:true},{n:'Performance',c:true},{n:'Arte Generativo',c:true}] },
+];
+
+const CX=280, CY=280, ORBIT=165, R=58;
+const svgNS = 'http://www.w3.org/2000/svg';
+const nodesG = document.getElementById('skill-nodes');
+const tooltip = document.getElementById('skill-tooltip');
+const knownSet = new Set();
+
+function deg(a){ return a * Math.PI/180; }
+
+SKILLS.forEach(sk => {
+  const x = CX + ORBIT * Math.cos(deg(sk.angle));
+  const y = CY + ORBIT * Math.sin(deg(sk.angle));
+  const g = document.createElementNS(svgNS,'g');
+  g.classList.add('skill-node');
+  if (sk.taller) g.classList.add('taller');
+  g.dataset.id = sk.id;
+
+  // glow ring for taller skills
+  if (sk.taller) {
+    const glow = document.createElementNS(svgNS,'circle');
+    glow.setAttribute('cx', x); glow.setAttribute('cy', y); glow.setAttribute('r', R+8);
+    glow.setAttribute('fill','none'); glow.setAttribute('stroke', sk.color);
+    glow.setAttribute('stroke-width','1'); glow.setAttribute('opacity','.25');
+    glow.style.animation = `pulse-ring 2s ease-in-out infinite ${Math.random()*2}s`;
+    g.appendChild(glow);
+  }
+
+  const c = document.createElementNS(svgNS,'circle');
+  c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', R);
+  c.setAttribute('fill','rgba(10,10,10,.8)');
+  c.setAttribute('stroke', sk.taller ? sk.color : 'rgba(255,255,255,.15)');
+  c.setAttribute('stroke-width', sk.taller ? '2' : '1');
+  c.classList.add('main-circle');
+  g.appendChild(c);
+
+  // Label (multiline)
+  const lines = sk.name.split('\n');
+  lines.forEach((ln,i) => {
+    const t = document.createElementNS(svgNS,'text');
+    t.setAttribute('x', x); t.setAttribute('y', y + (i - (lines.length-1)/2) * 14 + 2);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-family','IBM Plex Mono,monospace');
+    t.setAttribute('font-size', lines.length > 1 ? '10' : '11');
+    t.setAttribute('fill', sk.taller ? sk.color : '#888');
+    t.setAttribute('font-weight','500');
+    t.textContent = ln;
+    g.appendChild(t);
+  });
+
+  // Interaction
+  g.addEventListener('mouseenter', e => showSkillTooltip(sk, g, x, y));
+  g.addEventListener('mouseleave', () => { tooltip.classList.remove('visible'); });
+  g.addEventListener('click', () => toggleKnown(sk.id, g));
+
+  nodesG.appendChild(g);
+});
+
+function showSkillTooltip(sk, g, sx, sy) {
+  const svgEl = document.getElementById('skill-map');
+  const rect = svgEl.getBoundingClientRect();
+  const wrap = document.querySelector('.skill-map-wrap');
+  const wRect = wrap.getBoundingClientRect();
+  const vb = 560;
+  const scaleX = rect.width / vb;
+  const scaleY = rect.height / vb;
+  const px = rect.left - wRect.left + sx * scaleX;
+  const py = rect.top  - wRect.top  + sy * scaleY;
+
+  const covered = sk.subs.filter(s=>s.c).map(s=>`<li class="covered">${s.n}</li>`).join('');
+  const notCov  = sk.subs.filter(s=>!s.c).map(s=>`<li>${s.n}</li>`).join('');
+  tooltip.innerHTML = `<h4>${sk.name.replace('\n',' ')}</h4><ul>${covered}${notCov}</ul>${sk.taller?'<div style="margin-top:.5rem;font-size:.65rem;color:var(--green)">▶ cubre este taller</div>':''}`;
+  tooltip.style.left = (px + 70) + 'px';
+  tooltip.style.top  = (py - 20) + 'px';
+  tooltip.classList.add('visible');
+}
+
+function toggleKnown(id, g) {
+  if (knownSet.has(id)) { knownSet.delete(id); g.classList.remove('known'); }
+  else { knownSet.add(id); g.classList.add('known'); }
+  document.getElementById('known-count').textContent = knownSet.size;
+}
+function clearKnown() {
+  knownSet.clear();
+  document.querySelectorAll('.skill-node').forEach(g => g.classList.remove('known'));
+  document.getElementById('known-count').textContent = '0';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   S2 · PROTO-SYNTH TOOLTIPS
+══════════════════════════════════════════════════════════════════════════════ */
+const pinTooltip = document.getElementById('pin-tooltip');
+document.querySelectorAll('.pin-area').forEach(el => {
+  el.addEventListener('mouseenter', e => {
+    const name = el.dataset.name, gpio = el.dataset.gpio, desc = el.dataset.desc;
+    pinTooltip.innerHTML = `<h4>${name}</h4><div class="pin-gpio">${gpio}</div><p>${desc}</p>`;
+    const rect = el.closest('svg').getBoundingClientRect();
+    const wrap = document.querySelector('.board-wrap');
+    const wRect = wrap.getBoundingClientRect();
+    pinTooltip.style.left = (rect.right - wRect.left + 12) + 'px';
+    pinTooltip.style.top  = (e.clientY - wRect.top - 40) + 'px';
+    pinTooltip.classList.add('visible');
+  });
+  el.addEventListener('mouseleave', () => pinTooltip.classList.remove('visible'));
+  el.addEventListener('mousemove', e => {
+    const wRect = document.querySelector('.board-wrap').getBoundingClientRect();
+    pinTooltip.style.top = (e.clientY - wRect.top - 40) + 'px';
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   S3 · INSTALLATION STEPS
+══════════════════════════════════════════════════════════════════════════════ */
+let stepsCompleted = new Set();
+
+function toggleStep(header) {
+  const step = header.closest('.install-step');
+  step.classList.toggle('open');
+}
+
+function markStep(cb, idx) {
+  const step = cb.closest('.install-step');
+  if (cb.checked) { stepsCompleted.add(idx); step.classList.add('done'); }
+  else { stepsCompleted.delete(idx); step.classList.remove('done'); }
+  const n = stepsCompleted.size;
+  document.getElementById('progress-text').textContent = `${n} / 6 pasos completados`;
+  document.getElementById('progress-bar').style.width = (n/6*100)+'%';
+}
+
+function copyCmd(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ copiado'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copiar'; btn.classList.remove('copied'); }, 1800);
+  }).catch(() => {
+    btn.textContent = '✗ error';
+    setTimeout(() => { btn.textContent = 'copiar'; }, 1800);
+  });
+}
+
+function toggleTrouble(header) {
+  header.closest('.trouble-item').classList.toggle('open');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   S5 · VIDEO SYNTH CANVAS
+══════════════════════════════════════════════════════════════════════════════ */
+const canvas = document.getElementById('synth-canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resizeCanvas() {
+  W = canvas.offsetWidth; H = canvas.offsetHeight;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  if (fbCanvas) { fbCanvas.width = W * devicePixelRatio; fbCanvas.height = H * devicePixelRatio; fbCtx.scale(devicePixelRatio, devicePixelRatio); }
+}
+new ResizeObserver(resizeCanvas).observe(canvas);
+resizeCanvas();
+
+// State
+let synthMode = 'lissajous';
+let pitch = 220, bpm = 120, vol = 0.4;
+let palIdx = 0;
+const PALETTES = [
+  ['#00ff88','#007a42','#00ff4490'],
+  ['#f7941d','#7a4a0e','#f7941d90'],
+  ['#00ccff','#006677','#00ccff90'],
+  ['#cc44ff','#661180','#cc44ff90'],
+  ['#ffffff','#888888','#ffffff90'],
+];
+let pal = PALETTES[0];
+
+let t = 0;
+let lastBeat = 0;
+let particles = [];
+let fbCanvas = null, fbCtx = null;
+
+// Feedback canvas
+fbCanvas = document.createElement('canvas');
+fbCanvas.width = (canvas.offsetWidth||800) * devicePixelRatio;
+fbCanvas.height = (canvas.offsetHeight||400) * devicePixelRatio;
+fbCtx = fbCanvas.getContext('2d');
+fbCtx.scale(devicePixelRatio, devicePixelRatio);
+
+class Particle {
+  constructor(x,y) {
+    this.x=x; this.y=y;
+    const spd = 2 + Math.random()*4;
+    const ang = Math.random()*Math.PI*2;
+    this.vx=Math.cos(ang)*spd; this.vy=Math.sin(ang)*spd;
+    this.life=1; this.decay=0.015+Math.random()*0.02;
+    this.r=1.5+Math.random()*3;
+  }
+  update(){ this.x+=this.vx; this.y+=this.vy; this.vx*=0.97; this.vy*=0.97; this.life-=this.decay; }
+  draw(c){ c.globalAlpha=this.life*0.85; c.fillStyle=pal[0]; c.shadowBlur=8; c.shadowColor=pal[0]; c.beginPath(); c.arc(this.x,this.y,this.r*this.life,0,Math.PI*2); c.fill(); c.shadowBlur=0; c.globalAlpha=1; }
+}
+
+// Audio
+let audioCtx=null, osc=null, gain=null;
+let audioOn = false;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  osc = audioCtx.createOscillator();
+  gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.type = 'sawtooth';
+  osc.frequency.value = pitch;
+  gain.gain.value = 0;
+  osc.start();
+}
+
+function toggleAudio() {
+  if (!audioCtx) initAudio();
+  audioOn = !audioOn;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  gain.gain.setTargetAtTime(audioOn ? vol * 0.3 : 0, audioCtx.currentTime, 0.05);
+  const btn = document.getElementById('audio-btn');
+  const st  = document.getElementById('audio-status');
+  btn.textContent = audioOn ? '■ AUDIO OFF' : '▶ AUDIO ON';
+  st.textContent  = audioOn ? '🔊 audio activo' : 'sin audio';
+  st.className    = 'audio-status' + (audioOn ? ' on' : '');
+}
+
+function updatePitch(v) {
+  pitch = +v; document.getElementById('pitch-val').textContent = v+' Hz';
+  if (osc) osc.frequency.setTargetAtTime(pitch, audioCtx.currentTime, 0.05);
+}
+function updateBPM(v) { bpm = +v; document.getElementById('bpm-val').textContent = v; }
+function updateVol(v) {
+  vol = v/100; document.getElementById('vol-val').textContent = v+'%';
+  if (gain && audioOn) gain.gain.setTargetAtTime(vol*0.3, audioCtx.currentTime, 0.05);
+}
+function setMode(m, btn) {
+  synthMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Clear canvas on mode switch
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  fbCtx.fillStyle='#000'; fbCtx.fillRect(0,0,W,H);
+  if (osc && m==='lissajous') osc.type='sawtooth';
+  if (osc && m==='particles') osc.type='square';
+  if (osc && m==='geo')       osc.type='triangle';
+  if (osc && m==='glitch')    osc.type='square';
+  if (osc && m==='feedback')  osc.type='sine';
+}
+function setPalette(idx, el) {
+  palIdx = idx; pal = PALETTES[idx];
+  document.querySelectorAll('.pal-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+function goFullscreen() {
+  const el = document.getElementById('s5');
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+
+// FPS
+let fpsSamples = [], lastFrameTime = 0;
+
+// ── Draw modes ────────────────────────────────────────────────────────────────
+
+function drawLissajous() {
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fillRect(0,0,W,H);
+
+  const a = 2 + (pitch/880)*3;
+  const b = 3;
+  const delta = t * 0.0008;
+  const r = Math.min(W,H) * 0.38;
+  const n = 2000;
+
+  ctx.shadowBlur = 12; ctx.shadowColor = pal[0];
+  ctx.strokeStyle = pal[0]; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let i=0; i<=n; i++) {
+    const angle = (i/n) * Math.PI * 2;
+    const x = W/2 + Math.sin(a*angle + delta) * r;
+    const y = H/2 + Math.sin(b*angle) * r;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Second curve for richness
+  ctx.strokeStyle = pal[2]; ctx.lineWidth = 0.6; ctx.globalAlpha=0.5;
+  ctx.beginPath();
+  for (let i=0; i<=n; i++) {
+    const angle = (i/n) * Math.PI * 2;
+    const x = W/2 + Math.sin((a+.5)*angle + delta*1.3) * r*0.6;
+    const y = H/2 + Math.sin(b*angle + 1.2) * r*0.6;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke(); ctx.globalAlpha=1; ctx.shadowBlur=0;
+
+  // Scanline overlay
+  for (let y=0; y<H; y+=4) {
+    ctx.fillStyle='rgba(0,0,0,0.08)'; ctx.fillRect(0,y,W,1);
+  }
+}
+
+function drawParticles(beat) {
+  ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(0,0,W,H);
+
+  if (beat) {
+    const cx=W/2+((Math.random()-.5)*W*.4), cy=H/2+((Math.random()-.5)*H*.4);
+    const count = 20 + Math.floor(pitch/40);
+    for (let i=0;i<count;i++) particles.push(new Particle(cx,cy));
+  }
+
+  // Continuous particle trickle
+  if (Math.random()<0.3) {
+    const cx=W/2+((Math.random()-.5)*W*.6), cy=H/2+((Math.random()-.5)*H*.6);
+    particles.push(new Particle(cx,cy));
+  }
+
+  particles = particles.filter(p=>p.life>0);
+  particles.forEach(p=>{p.update();p.draw(ctx);});
+
+  // Center oscilloscope ring
+  const r = 30 + (pitch/880)*60;
+  ctx.strokeStyle=pal[0]; ctx.lineWidth=1.5; ctx.shadowBlur=16; ctx.shadowColor=pal[0];
+  ctx.globalAlpha=0.4;
+  ctx.beginPath(); ctx.arc(W/2,H/2,r+Math.sin(t*0.05)*8,0,Math.PI*2); ctx.stroke();
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+}
+
+function drawGeo() {
+  ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(0,0,W,H);
+  const speed = bpm/60 * 0.015;
+  [5,4,3,6,7].forEach((sides,idx) => {
+    const r    = (H*0.12) * (1.4 - idx*0.18);
+    const rot  = t * speed * (idx%2===0?1:-1) * (0.6+idx*0.2);
+    const cx=W/2, cy=H/2;
+    const wobble = Math.sin(t*0.04 + idx) * 0.15;
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(rot);
+    ctx.strokeStyle = pal[idx===0?0:1]; ctx.lineWidth=1+idx*0.3;
+    ctx.globalAlpha = 0.3 + 0.15*(4-idx);
+    ctx.shadowBlur=8; ctx.shadowColor=pal[0];
+    ctx.beginPath();
+    for (let i=0;i<=sides;i++) {
+      const a=(i/sides)*Math.PI*2;
+      const rx = r*(1+wobble*Math.sin(a*3));
+      const ry = r*(1+wobble*Math.cos(a*2));
+      i===0 ? ctx.moveTo(Math.cos(a)*rx, Math.sin(a)*ry) : ctx.lineTo(Math.cos(a)*rx, Math.sin(a)*ry);
+    }
+    ctx.stroke(); ctx.restore();
+  });
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+}
+
+function drawGlitch() {
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(0,0,W,H);
+
+  // Glitch slices
+  const slices = Math.floor(4 + (pitch/880)*8);
+  for (let i=0;i<slices;i++) {
+    const y = Math.random()*H;
+    const sliceH = Math.random()*20+2;
+    const dx = (Math.random()-.5)*60;
+    const srcY = Math.random()*H;
+    if (Math.random()<0.4) {
+      try {
+        const id = ctx.getImageData(0, srcY, W, sliceH);
+        ctx.putImageData(id, dx, y);
+      } catch(e){}
+    }
+  }
+
+  // RGB channel lines
+  const lineCount = Math.floor(3+(pitch/880)*5);
+  for (let i=0;i<lineCount;i++) {
+    const y = Math.random()*H;
+    const w = Math.random()*W*.8;
+    const x = Math.random()*(W-w);
+    ctx.fillStyle = ['rgba(0,255,136,0.6)','rgba(247,148,29,0.5)','rgba(0,200,255,0.4)'][i%3];
+    ctx.fillRect(x,y,w,1+(Math.random()*2));
+  }
+
+  // CRT scanlines
+  for (let y=0;y<H;y+=2) {
+    ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(0,y,W,1);
+  }
+
+  // Bright random blocks
+  if (Math.random()<0.1) {
+    ctx.fillStyle=pal[0]; ctx.globalAlpha=0.15;
+    ctx.fillRect(Math.random()*W*.8, Math.random()*H*.8, 20+Math.random()*60, 2+Math.random()*10);
+    ctx.globalAlpha=1;
+  }
+}
+
+function drawFeedback() {
+  // Copy current to feedback buffer, transform, draw back
+  fbCtx.drawImage(canvas, 0, 0, W, H);
+  ctx.fillStyle='rgba(0,0,0,0.03)'; ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(0.004 * (1 + bpm/120));
+  ctx.scale(1.006, 1.006);
+  ctx.globalAlpha=0.94;
+  ctx.drawImage(fbCanvas, 0, 0, fbCanvas.width, fbCanvas.height, -W/2, -H/2, W, H);
+  ctx.restore();
+  ctx.globalAlpha=1;
+
+  // Add new generative content on top
+  const r = 15 + (pitch/880)*40 + Math.sin(t*0.08)*10;
+  ctx.strokeStyle=pal[0]; ctx.lineWidth=1.5; ctx.shadowBlur=20; ctx.shadowColor=pal[0];
+  ctx.globalAlpha=0.7;
+  ctx.beginPath(); ctx.arc(W/2, H/2, r, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W/2 + Math.cos(t*0.06)*r*2.5, H/2 + Math.sin(t*0.04)*r*1.8);
+  ctx.lineTo(W/2, H/2);
+  ctx.stroke();
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+let rafId;
+function loop(now) {
+  rafId = requestAnimationFrame(loop);
+  t++;
+
+  // Beat detection
+  const msPerBeat = 60000/bpm;
+  const beat = (now - lastBeat) > msPerBeat;
+  if (beat) lastBeat = now;
+
+  switch(synthMode) {
+    case 'lissajous': drawLissajous(); break;
+    case 'particles': drawParticles(beat); break;
+    case 'geo':       drawGeo(); break;
+    case 'glitch':    drawGlitch(); break;
+    case 'feedback':  drawFeedback(); break;
+  }
+
+  // FPS
+  if (lastFrameTime) {
+    fpsSamples.push(1000/(now-lastFrameTime));
+    if (fpsSamples.length>30) fpsSamples.shift();
+    if (t%30===0) {
+      const avg = fpsSamples.reduce((a,b)=>a+b,0)/fpsSamples.length;
+      document.getElementById('fps-counter').textContent = avg.toFixed(0)+' fps';
+    }
+  }
+  lastFrameTime = now;
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
