@@ -157,41 +157,37 @@ code {
 }
 
 /* ── S1 Skill Map ──────────────────────────────────────────────────────────── */
-#skill-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
-@media (max-width: 800px) { #skill-layout { grid-template-columns: 1fr; } }
 @keyframes pulse-ring {
-  0%, 100% { opacity: .25; }
-  50%       { opacity: .55; }
+  0%, 100% { opacity: .2; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(1.04); }
 }
-.skill-map-wrap { position: relative; }
-#skill-map { width: 100%; max-width: 520px; height: auto; cursor: pointer; }
+#s1.section { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: calc(var(--nav-h) + 2rem); }
+.skill-hero-text { text-align: center; margin-bottom: 1.5rem; }
+.skill-hero-text .section-label { display: inline-block; }
+.skill-hero-text h2 { font-family: var(--font-mono); font-size: clamp(1.6rem,3.5vw,2.6rem); font-weight:600; color: var(--white); }
+.skill-hero-text h2 span { color: var(--green); }
+.skill-map-wrap { position: relative; width: 100%; max-width: 700px; }
+#skill-map { width: 100%; height: auto; cursor: pointer; }
 .skill-node { cursor: pointer; }
 .skill-node circle { transition: all .3s; }
-.skill-node:hover circle.main-circle { filter: brightness(1.4); }
-.skill-node.known circle.main-circle { fill: rgba(0,255,136,.12) !important; }
-.skill-node.taller circle.main-circle { stroke: var(--green) !important; stroke-width: 2.5 !important; }
+.skill-node:hover circle.main-circle { filter: brightness(1.5); transform-origin: center; }
+.skill-node.known circle.main-circle { fill: rgba(0,255,136,.15) !important; stroke-width: 2.5 !important; }
+.skill-map-footer { display: flex; align-items: center; justify-content: center; gap: 2rem; margin-top: 1.2rem; flex-wrap: wrap; }
 .skill-tooltip {
-  position: absolute; background: rgba(10,10,10,.95);
-  border: 1px solid rgba(0,255,136,.35); border-radius: 6px;
-  padding: 1rem 1.2rem; min-width: 180px;
+  position: absolute; background: rgba(8,8,8,.97);
+  border: 1px solid rgba(0,255,136,.4); border-radius: 6px;
+  padding: 1rem 1.2rem; min-width: 170px;
   font-family: var(--font-mono); font-size: .72rem;
   pointer-events: none; z-index: 100;
   opacity: 0; transition: opacity .2s;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 .skill-tooltip.visible { opacity: 1; }
-.skill-tooltip h4 { color: var(--green); margin-bottom: .5rem; font-size: .78rem; }
+.skill-tooltip h4 { color: var(--green); margin-bottom: .5rem; font-size: .8rem; }
 .skill-tooltip ul { list-style: none; }
-.skill-tooltip li { color: var(--gray); padding: .15rem 0; }
-.skill-tooltip li.covered { color: var(--white); }
-.skill-tooltip li.covered::before { content: '▶ '; color: var(--green); }
-.skill-map-right { }
-.skill-question { font-family: var(--font-mono); font-size: 1.1rem; color: var(--white); margin-bottom: 1rem; }
-.skill-question span { color: var(--green); }
-.skill-legend { margin-top: 1.5rem; font-family: var(--font-mono); font-size: .72rem; }
-.skill-legend div { display: flex; align-items: center; gap: .6rem; margin: .4rem 0; color: var(--gray); }
-.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-.known-count { font-size: 1.8rem; font-family: var(--font-mono); color: var(--green); }
+.skill-tooltip li { color: #888; padding: .15rem 0; }
+.skill-tooltip li::before { content: '· '; color: #555; }
+.known-count { font-size: 1.4rem; font-family: var(--font-mono); color: var(--green); }
 
 /* ── S2 Proto-Synth ────────────────────────────────────────────────────────── */
 #s2-inner { display: grid; grid-template-columns: 3fr 2fr; gap: 3rem; align-items: start; }
@@ -441,8 +437,12 @@ input[type=range]::-webkit-slider-thumb {
 <!-- S1 · SKILL MAP                                                             -->
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <section id="s1" class="section">
-  <div style="min-height:80vh" id="skill-layout">
-    <div class="skill-map-wrap fade-in">
+  <div class="skill-hero-text fade-in">
+    <div class="section-label">01 · Intro</div>
+    <h2>¿En qué <span>círculo</span> te encontrás hoy?</h2>
+    <p style="color:#555;font-size:.85rem;margin-top:.5rem;font-family:var(--font-mono)">Hacé click en los círculos que ya conocés</p>
+  </div>
+  <div class="skill-map-wrap fade-in">
       <svg id="skill-map" viewBox="0 0 560 560" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <filter id="glow-green"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -486,8 +486,10 @@ input[type=range]::-webkit-slider-thumb {
       <p style="margin-top:1.5rem;font-family:var(--font-mono);font-size:.75rem;color:#555">
         Círculos marcados: <span class="known-count" id="known-count">0</span>
       </p>
-      <button class="btn" style="margin-top:1.5rem" onclick="clearKnown()">↺ Reiniciar mapa</button>
-    </div>
+  </div>
+  <div class="skill-map-footer fade-in">
+    <span style="font-family:var(--font-mono);font-size:.75rem;color:#444">Marcados: <span id="known-count" class="known-count">0</span></span>
+    <button class="btn" onclick="clearKnown()" style="padding:.35rem .9rem;font-size:.7rem">↺ Reiniciar</button>
   </div>
 </section>
 
@@ -498,16 +500,13 @@ input[type=range]::-webkit-slider-thumb {
   <div class="section-label fade-in">02 · Hardware</div>
   <h2 class="section-title fade-in">El <span>Proto-Synth</span> v2</h2>
   <div class="divider fade-in"></div>
-  <p class="section-sub fade-in">Explorá los componentes. Hacé hover o click sobre cada parte para ver qué hace.</p>
+  <p class="section-sub fade-in">El pinout completo del Proto-Synth v2. Cada pin tiene una función específica.</p>
   <div id="s2-inner">
     <div class="board-wrap fade-in">
-      <svg id="board-svg" viewBox="0 0 480 560" xmlns="http://www.w3.org/2000/svg" style="max-width:480px;width:100%">
-        <defs>
-          <pattern id="pcb-grid" width="16" height="16" patternUnits="userSpaceOnUse">
-            <circle cx="8" cy="8" r=".8" fill="rgba(0,255,136,.18)"/>
-          </pattern>
-          <filter id="comp-glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
+      <img src="../../images/Pinout.png" alt="Pinout Proto-Synth v2" style="width:100%;max-width:520px;border-radius:8px;border:1px solid rgba(0,255,136,.2);display:block">
+      <!-- dummy SVG to keep JS tooltips working without errors -->
+      <svg id="board-svg" viewBox="0 0 480 560" xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <defs></defs>
         <!-- PCB base -->
         <rect x="20" y="20" width="440" height="520" rx="10" fill="#0d1a0d" stroke="rgba(0,255,136,.3)" stroke-width="1.5"/>
         <rect x="20" y="20" width="440" height="520" rx="10" fill="url(#pcb-grid)"/>
@@ -698,19 +697,21 @@ input[type=range]::-webkit-slider-thumb {
   <div class="section-label fade-in">03 · Setup</div>
   <h2 class="section-title fade-in">Instalación de <span>Software</span></h2>
   <div class="divider fade-in"></div>
-  <p class="section-sub fade-in">Seguí los pasos en orden. Tildá cada uno cuando lo terminés.</p>
+  <p class="section-sub fade-in">Seguí los pasos en orden. No hace falta experiencia previa — cada paso está explicado. Tildá cada uno cuando lo terminés.</p>
 
   <div class="install-grid fade-in">
 
-    <div class="install-step" data-step="0">
+    <div class="install-step open" data-step="0">
       <div class="install-step-header" onclick="toggleStep(this)">
         <div class="step-num">1</div>
-        <span class="step-title">Descargar Arduino IDE 2.x</span>
+        <span class="step-title">Instalar Visual Studio Code (editor de código)</span>
         <span class="step-toggle">▼</span>
       </div>
       <div class="install-step-body">
-        <p>Descargá la versión 2.x desde el sitio oficial. Compatible con Windows, Mac y Linux.</p>
-        <div class="cmd-block"><code>https://www.arduino.cc/en/software</code><button class="copy-btn" onclick="copyCmd(this,'https://www.arduino.cc/en/software')">copiar</button></div>
+        <p>Visual Studio Code (VSCode) es el editor de texto donde vas a escribir y ver el código. Es gratuito y es el más usado en el mundo. Aunque Arduino IDE también puede editar código, VSCode es mucho más cómodo para explorar archivos, hacer búsquedas y entender proyectos grandes.</p>
+        <p>Entrá al link, elegí tu sistema operativo (Windows / Mac / Linux) y descargá el instalador. Seguí los pasos de instalación como cualquier programa normal.</p>
+        <div class="cmd-block"><code>https://code.visualstudio.com/download</code><button class="copy-btn" onclick="copyCmd(this,'https://code.visualstudio.com/download')">copiar</button></div>
+        <p style="color:#555;font-size:.78rem">💡 Una vez instalado, abrí VSCode y explorá la carpeta del repositorio desde File → Open Folder.</p>
         <label class="step-mark"><input type="checkbox" onchange="markStep(this,0)"> Marcar como completado</label>
       </div>
     </div>
@@ -718,14 +719,14 @@ input[type=range]::-webkit-slider-thumb {
     <div class="install-step" data-step="1">
       <div class="install-step-header" onclick="toggleStep(this)">
         <div class="step-num">2</div>
-        <span class="step-title">Agregar soporte ESP32 al Board Manager</span>
+        <span class="step-title">Instalar Arduino IDE 2.x (para cargar código al ESP32)</span>
         <span class="step-toggle">▼</span>
       </div>
       <div class="install-step-body">
-        <p>En Arduino IDE: <strong style="color:#aaa">File → Preferences</strong>, y en "Additional boards manager URLs" pegá esta URL:</p>
-        <div class="cmd-block"><code>https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json</code><button class="copy-btn" onclick="copyCmd(this,'https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json')">copiar</button></div>
-        <p>Luego: <strong style="color:#aaa">Tools → Board → Boards Manager</strong>, buscá "esp32" e instalá la versión más reciente.</p>
-        <p>Seleccioná la placa: <code>ESP32 Dev Module</code></p>
+        <p>Arduino IDE es el programa que traduce el código a instrucciones que entiende el ESP32 y lo envía por el cable USB. Es gratuito. Descargá la versión 2.x — la versión 1.x está desactualizada y puede dar problemas con el ESP32.</p>
+        <p>Entrá al link y descargá el instalador para tu sistema operativo. La instalación es automática.</p>
+        <div class="cmd-block"><code>https://www.arduino.cc/en/software</code><button class="copy-btn" onclick="copyCmd(this,'https://www.arduino.cc/en/software')">copiar</button></div>
+        <p style="color:#555;font-size:.78rem">💡 Al abrir Arduino IDE por primera vez va a aparecer en inglés — está bien así, lo usaremos en inglés.</p>
         <label class="step-mark"><input type="checkbox" onchange="markStep(this,1)"> Marcar como completado</label>
       </div>
     </div>
@@ -733,13 +734,19 @@ input[type=range]::-webkit-slider-thumb {
     <div class="install-step" data-step="2">
       <div class="install-step-header" onclick="toggleStep(this)">
         <div class="step-num">3</div>
-        <span class="step-title">Instalar librería Mozzi (síntesis avanzada)</span>
+        <span class="step-title">Agregar soporte para ESP32 en Arduino IDE</span>
         <span class="step-toggle">▼</span>
       </div>
       <div class="install-step-body">
-        <p>Mozzi permite síntesis de audio compleja con osciladores, filtros y efectos. Desde el Library Manager: buscar "Mozzi".</p>
-        <div class="cmd-block"><code>Tools → Manage Libraries → buscar "Mozzi"</code><button class="copy-btn" onclick="copyCmd(this,'Tools → Manage Libraries → buscar Mozzi')">copiar</button></div>
-        <p style="color:#555;font-size:.78rem">Versión recomendada: 1.x (compatible con ESP32 core v3.x)</p>
+        <p>Arduino IDE viene preparado para placas Arduino (un tipo de microcontrolador). Para que también funcione con el ESP32 (que es el chip del Proto-Synth), hay que agregar un "paquete de soporte" extra. Solo se hace una vez.</p>
+        <p><strong style="color:#aaa">Paso a paso:</strong></p>
+        <p>1. Abrí Arduino IDE → menú <strong style="color:#aaa">File</strong> → <strong style="color:#aaa">Preferences</strong></p>
+        <p>2. En el campo "Additional boards manager URLs", pegá esta URL exactamente:</p>
+        <div class="cmd-block"><code>https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json</code><button class="copy-btn" onclick="copyCmd(this,'https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json')">copiar</button></div>
+        <p>3. Hacé click en OK para cerrar Preferences.</p>
+        <p>4. Menú <strong style="color:#aaa">Tools</strong> → <strong style="color:#aaa">Board</strong> → <strong style="color:#aaa">Boards Manager...</strong></p>
+        <p>5. En el buscador escribí <strong style="color:#aaa">esp32</strong> y buscá el paquete de <strong style="color:#aaa">Espressif Systems</strong>. Hacé click en Install. Puede tardar unos minutos.</p>
+        <p style="color:#555;font-size:.78rem">💡 Si ves un error de descarga, verificá tu conexión a internet y volvé a intentar.</p>
         <label class="step-mark"><input type="checkbox" onchange="markStep(this,2)"> Marcar como completado</label>
       </div>
     </div>
@@ -747,14 +754,16 @@ input[type=range]::-webkit-slider-thumb {
     <div class="install-step" data-step="3">
       <div class="install-step-header" onclick="toggleStep(this)">
         <div class="step-num">4</div>
-        <span class="step-title">Instalar librería MPU6050 (IMU)</span>
+        <span class="step-title">Seleccionar la placa correcta: ESP32 Dev Module</span>
         <span class="step-toggle">▼</span>
       </div>
       <div class="install-step-body">
-        <p>Para el acelerómetro/giroscopio MPU6050. Instalá las dos librerías de Adafruit:</p>
-        <div class="cmd-block"><code>Adafruit MPU6050</code><button class="copy-btn" onclick="copyCmd(this,'Adafruit MPU6050')">copiar</button></div>
-        <div class="cmd-block"><code>Adafruit Unified Sensor</code><button class="copy-btn" onclick="copyCmd(this,'Adafruit Unified Sensor')">copiar</button></div>
-        <p style="color:#555;font-size:.78rem">Instalá también las dependencias que te pida Arduino IDE.</p>
+        <p>Antes de cargar cualquier código, Arduino IDE necesita saber qué placa estás usando. Si no lo configurás, el código no va a funcionar.</p>
+        <p><strong style="color:#aaa">Paso a paso:</strong></p>
+        <p>1. Conectá el Proto-Synth al computador con el cable USB.</p>
+        <p>2. Menú <strong style="color:#aaa">Tools</strong> → <strong style="color:#aaa">Board</strong> → <strong style="color:#aaa">esp32</strong> → buscá y seleccioná <strong style="color:#00ff88">ESP32 Dev Module</strong></p>
+        <p>3. Menú <strong style="color:#aaa">Tools</strong> → <strong style="color:#aaa">Port</strong> → seleccioná el puerto que aparece (en Windows: COM3, COM4, etc. En Mac: /dev/cu.usbserial...)</p>
+        <p style="color:#555;font-size:.78rem">💡 Si no aparece ningún puerto, es posible que necesites instalar el driver del chip USB. En el troubleshooting de la sección anterior encontrás cómo.</p>
         <label class="step-mark"><input type="checkbox" onchange="markStep(this,3)"> Marcar como completado</label>
       </div>
     </div>
@@ -762,13 +771,19 @@ input[type=range]::-webkit-slider-thumb {
     <div class="install-step" data-step="4">
       <div class="install-step-header" onclick="toggleStep(this)">
         <div class="step-num">5</div>
-        <span class="step-title">Clonar el repositorio del Proto-Synth</span>
+        <span class="step-title">Instalar librerías de audio y sensores</span>
         <span class="step-toggle">▼</span>
       </div>
       <div class="install-step-body">
-        <p>Descargá todos los firmwares de ejemplo desde GitHub:</p>
-        <div class="cmd-block"><code>git clone https://github.com/GC-Lab-Gonzalo/proto-synth-v2</code><button class="copy-btn" onclick="copyCmd(this,'git clone https://github.com/GC-Lab-Gonzalo/proto-synth-v2')">copiar</button></div>
-        <p>O descargá el ZIP desde GitHub: Code → Download ZIP.</p>
+        <p>Las librerías son paquetes de código que otros programadores ya hicieron, que podemos usar para no empezar de cero. Necesitamos tres:</p>
+        <p><strong style="color:#aaa">Mozzi</strong> — genera sonido en el ESP32 (osciladores, filtros, síntesis)</p>
+        <p><strong style="color:#aaa">Adafruit MPU6050</strong> — lee el sensor de movimiento (IMU)</p>
+        <p><strong style="color:#aaa">Adafruit Unified Sensor</strong> — requerida por la librería del IMU</p>
+        <p>Para instalar cada una: <strong style="color:#aaa">Tools</strong> → <strong style="color:#aaa">Manage Libraries...</strong> → buscá el nombre exacto → Install</p>
+        <div class="cmd-block"><code>Mozzi</code><button class="copy-btn" onclick="copyCmd(this,'Mozzi')">copiar nombre</button></div>
+        <div class="cmd-block"><code>Adafruit MPU6050</code><button class="copy-btn" onclick="copyCmd(this,'Adafruit MPU6050')">copiar nombre</button></div>
+        <div class="cmd-block"><code>Adafruit Unified Sensor</code><button class="copy-btn" onclick="copyCmd(this,'Adafruit Unified Sensor')">copiar nombre</button></div>
+        <p style="color:#555;font-size:.78rem">💡 Si Arduino IDE te pregunta si instalás las dependencias, elegí "Install All".</p>
         <label class="step-mark"><input type="checkbox" onchange="markStep(this,4)"> Marcar como completado</label>
       </div>
     </div>
@@ -776,12 +791,16 @@ input[type=range]::-webkit-slider-thumb {
     <div class="install-step" data-step="5">
       <div class="install-step-header" onclick="toggleStep(this)">
         <div class="step-num">6</div>
-        <span class="step-title">Python + librerías para Video Synth (opcional)</span>
+        <span class="step-title">Descargar el repositorio del Proto-Synth</span>
         <span class="step-toggle">▼</span>
       </div>
       <div class="install-step-body">
-        <p>Solo si vas a usar el Video Synth con Python. Requiere Python 3.10+ y FFmpeg.</p>
-        <div class="cmd-block"><code>pip install opencv-python numpy pygame sounddevice soundfile pyserial imageio-ffmpeg</code><button class="copy-btn" onclick="copyCmd(this,'pip install opencv-python numpy pygame sounddevice soundfile pyserial imageio-ffmpeg')">copiar</button></div>
+        <p>El repositorio es la carpeta en GitHub que tiene todos los firmwares y el código del proyecto. Lo podés descargar de dos formas:</p>
+        <p><strong style="color:#aaa">Opción A (recomendada, sin instalar nada extra):</strong> Entrá al link → hacé click en el botón verde <strong style="color:#00ff88">Code</strong> → elegí <strong style="color:#00ff88">Download ZIP</strong> → descomprimí la carpeta en un lugar fácil de encontrar (por ejemplo, tu escritorio o Documentos).</p>
+        <p><strong style="color:#aaa">Opción B (con Git):</strong></p>
+        <div class="cmd-block"><code>git clone https://github.com/GC-Lab-Gonzalo/proto-synth-v2</code><button class="copy-btn" onclick="copyCmd(this,'git clone https://github.com/GC-Lab-Gonzalo/proto-synth-v2')">copiar</button></div>
+        <div class="cmd-block"><code>https://github.com/GC-Lab-Gonzalo/proto-synth-v2</code><button class="copy-btn" onclick="copyCmd(this,'https://github.com/GC-Lab-Gonzalo/proto-synth-v2')">copiar link</button></div>
+        <p style="color:#555;font-size:.78rem">💡 Una vez descargado, abrí la carpeta en VSCode para explorar todos los firmwares disponibles.</p>
         <label class="step-mark"><input type="checkbox" onchange="markStep(this,5)"> Marcar como completado</label>
       </div>
     </div>
@@ -873,8 +892,24 @@ input[type=range]::-webkit-slider-thumb {
     <h2 class="section-title">Video Synth <span>Interactivo</span></h2>
     <p style="color:var(--gray);font-size:.9rem;margin-top:.3rem">Sintetizador visual corriendo en el navegador. Controlá los parámetros en tiempo real.</p>
   </div>
+  <!-- YouTube URL input -->
+  <div style="padding:.8rem 2rem;background:rgba(0,0,0,.5);border-bottom:1px solid rgba(0,255,136,.1);display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+    <span style="font-family:var(--font-mono);font-size:.72rem;color:#555;white-space:nowrap">▶ VIDEO FUENTE:</span>
+    <input id="yt-url" type="text" placeholder="Pegá un link de YouTube (ej: https://www.youtube.com/watch?v=...)" style="flex:1;min-width:260px;background:#111;border:1px solid rgba(0,255,136,.2);color:var(--white);padding:.4rem .8rem;border-radius:3px;font-family:var(--font-mono);font-size:.75rem;outline:none">
+    <button class="btn" onclick="loadYoutube()" style="padding:.4rem .9rem;font-size:.7rem">CARGAR</button>
+    <button class="btn" onclick="loadYoutube('dQw4w9WgXcQ')" style="padding:.4rem .9rem;font-size:.7rem;border-color:#333;color:#555">demo</button>
+    <span id="yt-status" style="font-family:var(--font-mono);font-size:.68rem;color:#444"></span>
+  </div>
+
   <div class="synth-stage">
-    <canvas id="synth-canvas"></canvas>
+    <!-- YouTube player + canvas overlay -->
+    <div id="synth-video-wrap" style="position:relative;width:100%;background:#000;line-height:0">
+      <div id="yt-placeholder" style="width:100%;height:50vh;display:flex;align-items:center;justify-content:center;background:#050505;border-bottom:1px solid #111">
+        <span style="font-family:var(--font-mono);font-size:.8rem;color:#333">Cargá un video de YouTube para comenzar — o usá el demo</span>
+      </div>
+      <iframe id="yt-frame" style="display:none;width:100%;height:50vh;border:none" allow="autoplay;encrypted-media" allowfullscreen></iframe>
+      <canvas id="synth-canvas" style="position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:screen;pointer-events:none"></canvas>
+    </div>
     <div class="synth-controls">
       <!-- Mode -->
       <div class="ctrl-group">
@@ -935,82 +970,22 @@ input[type=range]::-webkit-slider-thumb {
   <h2 class="section-title fade-in">Recursos y <span>Próximos Pasos</span></h2>
   <div class="divider fade-in"></div>
 
-  <div class="resources-grid fade-in">
+  <div class="resources-grid fade-in" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));max-width:900px">
     <a class="resource-card" href="https://github.com/GC-Lab-Gonzalo/proto-synth-v2" target="_blank">
       <h3>Repositorio GitHub</h3>
-      <p>Todos los firmwares, esquemáticos, archivos Gerber y documentación del proyecto.</p>
-      <div class="rc-tag"><span class="tag">open source</span></div>
+      <p>Todos los firmwares, esquemáticos, archivos Gerber y documentación del proyecto. Código abierto.</p>
+      <div class="rc-tag"><span class="tag">github.com/GC-Lab-Gonzalo/proto-synth-v2</span></div>
     </a>
-    <div class="resource-card">
-      <h3>Firmware: Lista Completa</h3>
-      <p>+20 ejemplos: osciladores, secuenciadores, control MIDI, IMU gestual, samplers y más.</p>
-      <div class="rc-tag"><span class="tag">20 firmwares</span></div>
-    </div>
-    <div class="resource-card">
-      <h3>Video Synth</h3>
-      <p>App Python para transformar cualquier video en un instrumento audiovisual en tiempo real.</p>
-      <div class="rc-tag"><span class="tag orange-tag" style="border-color:var(--orange);color:var(--orange)">Python</span></div>
-    </div>
-    <a class="resource-card" href="https://gclabchile.com" target="_blank">
-      <h3>GC Lab Chile</h3>
-      <p>Laboratorio de diseño, electrónica y arte. Próximos talleres, proyectos y comunidad.</p>
-      <div class="rc-tag"><span class="tag">comunidad</span></div>
+    <a class="resource-card" href="https://code.visualstudio.com/download" target="_blank">
+      <h3>Visual Studio Code</h3>
+      <p>Editor de código gratuito. El más usado en el mundo para explorar y editar proyectos de software.</p>
+      <div class="rc-tag"><span class="tag">code.visualstudio.com</span></div>
     </a>
-    <div class="resource-card">
-      <h3>Mozzi Library</h3>
-      <p>Librería de síntesis de audio de baja latencia para Arduino/ESP32. Osciladores, filtros, efectos.</p>
-      <div class="rc-tag"><span class="tag">DSP</span></div>
-    </div>
-    <div class="resource-card">
-      <h3>Pinout ProtoSynth v2</h3>
-      <p>Diagrama completo de pines y conexiones del hardware v2.0 con notas de errata.</p>
-      <div class="rc-tag"><span class="tag">hardware</span></div>
-    </div>
-  </div>
-
-  <div class="skills-recap card fade-in" style="margin-top:2rem">
-    <h3>¿Qué habilidades cubrió el taller?</h3>
-    <div class="skills-recap-grid">
-      <div class="skill-recap-item">
-        <h4>⚡ Electrónica</h4>
-        <ul>
-          <li>Lectura de esquemáticos</li>
-          <li>Microcontroladores ESP32</li>
-          <li>DAC y señal analógica</li>
-          <li>Protocolo MIDI</li>
-          <li>Sensores (IMU, LDR, Mic)</li>
-        </ul>
-      </div>
-      <div class="skill-recap-item">
-        <h4>💻 Programación</h4>
-        <ul>
-          <li>C++ / Arduino IDE</li>
-          <li>Python (Video Synth)</li>
-          <li>JavaScript / Web API</li>
-          <li>Comunicación serial</li>
-          <li>Algoritmos de síntesis</li>
-        </ul>
-      </div>
-      <div class="skill-recap-item">
-        <h4>🎨 Arte + Música</h4>
-        <ul>
-          <li>Síntesis de audio</li>
-          <li>Arte generativo</li>
-          <li>Video reactivo en vivo</li>
-          <li>Performance instrumental</li>
-          <li>Escalas y teoría musical</li>
-        </ul>
-      </div>
-      <div class="skill-recap-item">
-        <h4>🤖 + IA</h4>
-        <ul>
-          <li>Claude Code en acción</li>
-          <li>Desarrollo asistido</li>
-          <li>Prototipado rápido</li>
-          <li>Documentación automática</li>
-        </ul>
-      </div>
-    </div>
+    <a class="resource-card" href="https://www.arduino.cc/en/software" target="_blank">
+      <h3>Arduino IDE 2.x</h3>
+      <p>El programa para compilar y cargar el firmware al ESP32. Versión 2.x requerida.</p>
+      <div class="rc-tag"><span class="tag">arduino.cc</span></div>
+    </a>
   </div>
 
   <div style="text-align:center;padding:3rem 0;font-family:var(--font-mono);font-size:.75rem;color:#333" class="fade-in">
@@ -1028,10 +1003,10 @@ input[type=range]::-webkit-slider-thumb {
   const lines = document.querySelectorAll('#boot-text .line');
   let i = 0;
   function showNext() {
-    if (i < lines.length) { lines[i].classList.add('show'); i++; setTimeout(showNext, 220); }
-    else { setTimeout(() => document.getElementById('boot').classList.add('hide'), 500); }
+    if (i < lines.length) { lines[i].classList.add('show'); i++; setTimeout(showNext, 420); }
+    else { setTimeout(() => document.getElementById('boot').classList.add('hide'), 1800); }
   }
-  setTimeout(showNext, 200);
+  setTimeout(showNext, 600);
 })();
 
 /* ── Scroll nav active ──────────────────────────────────────────────────────── */
@@ -1058,16 +1033,16 @@ document.querySelectorAll('.fade-in').forEach(el => fio.observe(el));
    S1 · SKILL MAP
 ══════════════════════════════════════════════════════════════════════════════ */
 const SKILLS = [
-  { id:'ia',          name:'Inteligencia\nArtificial', angle:-90,   color:'#8844ff', taller:false,
-    subs:[{n:'Machine Learning',c:false},{n:'IA Generativa',c:false},{n:'Computer Vision',c:false},{n:'Prompting / Claude',c:true}] },
-  { id:'electronica', name:'Electrónica',             angle:-18,   color:'#00ff88', taller:true,
-    subs:[{n:'PCB / Circuitos',c:true},{n:'Microcontroladores',c:true},{n:'Síntesis de Audio',c:true},{n:'MIDI',c:true},{n:'Sensores',c:true}] },
-  { id:'programacion',name:'Programación',            angle:54,    color:'#00ccff', taller:true,
-    subs:[{n:'Arduino / C++',c:true},{n:'Python',c:true},{n:'JavaScript',c:true},{n:'Firmware',c:true}] },
-  { id:'robotica',    name:'Robótica',                angle:126,   color:'#ff6644', taller:false,
-    subs:[{n:'Sensores',c:true},{n:'Actuadores',c:false},{n:'Control',c:false},{n:'Automatización',c:false}] },
-  { id:'arte',        name:'Arte +\nMúsica',          angle:198,   color:'#f7941d', taller:true,
-    subs:[{n:'Música / Síntesis',c:true},{n:'Video Generativo',c:true},{n:'Performance',c:true},{n:'Arte Generativo',c:true}] },
+  { id:'ia',           name:'Inteligencia\nArtificial', angle:-90,  color:'#8844ff',
+    subs:['Machine Learning','IA Generativa','Computer Vision','Automatización','Prompting'] },
+  { id:'electronica',  name:'Electrónica',              angle:-18,  color:'#00ff88',
+    subs:['PCB / Circuitos','Microcontroladores','Síntesis de Audio','MIDI','Sensores'] },
+  { id:'programacion', name:'Programación',             angle:54,   color:'#00ccff',
+    subs:['Arduino / C++','Python','JavaScript','Firmware','Comunicación serial'] },
+  { id:'robotica',     name:'Robótica',                 angle:126,  color:'#ff6644',
+    subs:['Sensores','Actuadores','Control PID','Automatización','Impresión 3D'] },
+  { id:'arte',         name:'Arte +\nMúsica',           angle:198,  color:'#f7941d',
+    subs:['Síntesis de Audio','Video Generativo','Performance','Arte Generativo','Composición'] },
 ];
 
 const CX=280, CY=280, ORBIT=165, R=58;
@@ -1083,24 +1058,13 @@ SKILLS.forEach(sk => {
   const y = CY + ORBIT * Math.sin(deg(sk.angle));
   const g = document.createElementNS(svgNS,'g');
   g.classList.add('skill-node');
-  if (sk.taller) g.classList.add('taller');
   g.dataset.id = sk.id;
-
-  // glow ring for taller skills
-  if (sk.taller) {
-    const glow = document.createElementNS(svgNS,'circle');
-    glow.setAttribute('cx', x); glow.setAttribute('cy', y); glow.setAttribute('r', R+8);
-    glow.setAttribute('fill','none'); glow.setAttribute('stroke', sk.color);
-    glow.setAttribute('stroke-width','1'); glow.setAttribute('opacity','.25');
-    glow.style.animation = `pulse-ring 2s ease-in-out infinite ${Math.random()*2}s`;
-    g.appendChild(glow);
-  }
 
   const c = document.createElementNS(svgNS,'circle');
   c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', R);
-  c.setAttribute('fill','rgba(10,10,10,.8)');
-  c.setAttribute('stroke', sk.taller ? sk.color : 'rgba(255,255,255,.15)');
-  c.setAttribute('stroke-width', sk.taller ? '2' : '1');
+  c.setAttribute('fill','rgba(10,10,10,.85)');
+  c.setAttribute('stroke', sk.color);
+  c.setAttribute('stroke-width','1.5');
   c.classList.add('main-circle');
   g.appendChild(c);
 
@@ -1112,7 +1076,7 @@ SKILLS.forEach(sk => {
     t.setAttribute('text-anchor','middle');
     t.setAttribute('font-family','IBM Plex Mono,monospace');
     t.setAttribute('font-size', lines.length > 1 ? '10' : '11');
-    t.setAttribute('fill', sk.taller ? sk.color : '#888');
+    t.setAttribute('fill', sk.color);
     t.setAttribute('font-weight','500');
     t.textContent = ln;
     g.appendChild(t);
@@ -1137,9 +1101,8 @@ function showSkillTooltip(sk, g, sx, sy) {
   const px = rect.left - wRect.left + sx * scaleX;
   const py = rect.top  - wRect.top  + sy * scaleY;
 
-  const covered = sk.subs.filter(s=>s.c).map(s=>`<li class="covered">${s.n}</li>`).join('');
-  const notCov  = sk.subs.filter(s=>!s.c).map(s=>`<li>${s.n}</li>`).join('');
-  tooltip.innerHTML = `<h4>${sk.name.replace('\n',' ')}</h4><ul>${covered}${notCov}</ul>${sk.taller?'<div style="margin-top:.5rem;font-size:.65rem;color:var(--green)">▶ cubre este taller</div>':''}`;
+  const subsHtml = sk.subs.map(s=>`<li>${s}</li>`).join('');
+  tooltip.innerHTML = `<h4 style="color:${sk.color}">${sk.name.replace('\n',' ')}</h4><ul>${subsHtml}</ul>`;
   tooltip.style.left = (px + 70) + 'px';
   tooltip.style.top  = (py - 20) + 'px';
   tooltip.classList.add('visible');
@@ -1322,9 +1285,30 @@ function setPalette(idx, el) {
   el.classList.add('active');
 }
 function goFullscreen() {
-  const el = document.getElementById('s5');
+  const el = document.getElementById('synth-video-wrap');
   if (el.requestFullscreen) el.requestFullscreen();
   else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+
+// YouTube loader
+function loadYoutube(forceId) {
+  let videoId = forceId;
+  if (!videoId) {
+    const url = document.getElementById('yt-url').value.trim();
+    if (!url) { document.getElementById('yt-status').textContent = 'Pegá un URL primero'; return; }
+    const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+    if (!m) { document.getElementById('yt-status').textContent = '✗ URL no reconocida'; return; }
+    videoId = m[1];
+  }
+  const frame = document.getElementById('yt-frame');
+  const ph    = document.getElementById('yt-placeholder');
+  frame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&rel=0`;
+  ph.style.display = 'none';
+  frame.style.display = 'block';
+  document.getElementById('yt-status').textContent = '✓ video cargado';
+  // Switch to feedback mode for best visual overlay
+  const fbBtn = document.querySelector('.mode-btn[onclick*="feedback"]');
+  if (fbBtn && synthMode !== 'feedback') setMode('feedback', fbBtn);
 }
 
 // FPS
