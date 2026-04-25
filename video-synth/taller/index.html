@@ -438,18 +438,18 @@ input[type=range]::-webkit-slider-thumb {
 <!-- S1 · SKILL MAP                                                             -->
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <section id="s1" class="section" style="display:flex;align-items:center;justify-content:center;padding:var(--nav-h) 1rem 1rem">
-  <svg id="skill-map" viewBox="0 0 920 760" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:960px;height:auto">
+  <svg id="skill-map" viewBox="0 0 960 820" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:1000px;height:auto">
     <defs>
       <filter id="sk-glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     </defs>
     <g id="skill-lines"></g>
     <g id="skill-nodes"></g>
     <g id="skill-central">
-      <circle cx="460" cy="380" r="74" fill="rgba(0,255,136,.06)" stroke="#00ff88" stroke-width="1.8" filter="url(#sk-glow)"/>
-      <circle cx="460" cy="380" r="67" fill="none" stroke="rgba(0,255,136,.12)" stroke-width="1" stroke-dasharray="5 5"/>
-      <text x="460" y="372" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="13" fill="#00ff88" font-weight="600">GC LAB</text>
-      <text x="460" y="389" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="rgba(0,255,136,.55)">Taller</text>
-      <text x="460" y="403" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="rgba(0,255,136,.55)">Colaborativo</text>
+      <circle cx="480" cy="410" r="76" fill="rgba(0,255,136,.06)" stroke="#00ff88" stroke-width="1.8" filter="url(#sk-glow)"/>
+      <circle cx="480" cy="410" r="69" fill="none" stroke="rgba(0,255,136,.12)" stroke-width="1" stroke-dasharray="5 5"/>
+      <text x="480" y="402" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="14" fill="#00ff88" font-weight="600">GC LAB</text>
+      <text x="480" y="419" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="rgba(0,255,136,.55)">Taller</text>
+      <text x="480" y="434" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="rgba(0,255,136,.55)">Colaborativo</text>
     </g>
   </svg>
   <div id="skill-tooltip" class="skill-tooltip"></div>
@@ -1025,13 +1025,15 @@ const SKILLS = [
   const nodesG = document.getElementById('skill-nodes');
   const tooltip = document.getElementById('skill-tooltip');
 
-  // Layout constants — viewBox 920×760, center at (460,380)
-  const CX = 460, CY = 380;
-  const MAIN_ORBIT = 190;   // center → domain
-  const SUB_ORBIT  = 130;   // domain → sub (130px guarantees no overlap at R_SUB=26)
-  const R_MAIN     = 48;
-  const R_SUB      = 26;
-  const SPREAD_DEG = 80;    // total arc per domain (80° → 20° between 5 subs)
+  // Layout constants — viewBox 960×820, center at (480,410)
+  // Math check: chord = 2 × SUB_ORBIT × sin(SPREAD/(n-1)/2)
+  //   = 2 × 155 × sin(12°) = 64.5 px  >  2 × R_SUB = 56 px  ✓ no overlap
+  const CX = 480, CY = 410;
+  const MAIN_ORBIT = 185;   // center → domain
+  const SUB_ORBIT  = 155;   // domain → sub
+  const R_MAIN     = 50;
+  const R_SUB      = 28;
+  const SPREAD_DEG = 96;    // 96° total → 24° between 5 subs
   const r2d = a => a * Math.PI / 180;
 
   // Track marked sub-circles: "skillId-subIndex"
@@ -1077,20 +1079,22 @@ const SKILLS = [
         fill:'rgba(8,8,8,.92)', stroke:colDim, 'stroke-width':'1.5'});
       sg.appendChild(subCircle);
 
-      // Sub label — up to 2 lines
+      // Sub label — up to 2 lines, vertically centered
       const words = name.split(' ');
       const splitAt = Math.ceil(words.length / 2);
       const l1 = words.slice(0, splitAt).join(' ');
       const l2 = words.slice(splitAt).join(' ');
       const hasL2 = l2.length > 0;
-      sg.appendChild(mkEl('text',{x:sx, y: hasL2 ? sy-5 : sy+4,
+      const lineH = 11;
+      const baseY = hasL2 ? sy - lineH/2 : sy;
+      sg.appendChild(mkEl('text',{x:sx, y: baseY,
         'text-anchor':'middle','dominant-baseline':'middle',
-        'font-family':'IBM Plex Mono,monospace','font-size':'8',
+        'font-family':'IBM Plex Mono,monospace','font-size':'9',
         'fill':colDim,'font-weight':'400'}, l1));
       if (hasL2)
-        sg.appendChild(mkEl('text',{x:sx, y:sy+8,
+        sg.appendChild(mkEl('text',{x:sx, y: baseY + lineH,
           'text-anchor':'middle','dominant-baseline':'middle',
-          'font-family':'IBM Plex Mono,monospace','font-size':'8',
+          'font-family':'IBM Plex Mono,monospace','font-size':'9',
           'fill':colDim}, l2));
 
       // Click handler — toggle marked state
@@ -1156,7 +1160,7 @@ const SKILLS = [
       mainC.setAttribute('fill','rgba(8,8,8,.98)');
       const svgRect = svg.getBoundingClientRect();
       const sRect   = document.getElementById('s1').getBoundingClientRect();
-      const scX = svgRect.width / 920, scY = svgRect.height / 760;
+      const scX = svgRect.width / 960, scY = svgRect.height / 820;
       const px = svgRect.left - sRect.left + dx * scX;
       const py = svgRect.top  - sRect.top  + dy * scY;
       tooltip.innerHTML = `<h4 style="color:${col}">${sk.name.replace('\n',' ')}</h4>`
